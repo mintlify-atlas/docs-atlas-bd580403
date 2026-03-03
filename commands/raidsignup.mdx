@@ -1,0 +1,208 @@
+---
+title: /raidsignup
+description: Manually assign or remove users from raid signups
+---
+
+The `/raidsignup` command allows administrators to manually add, remove, or move users between raid slots and waitlists.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/raidsignup action:<assign|remove|side|waitlist> raid_id:<raid_id> user:<user> [position:<1-12>] [role:<role_name>] [side:<side>]
+```
+
+<ParamField path="action" type="choice" required>
+  Operation to perform:
+  - `assign` - Add user to a raid slot
+  - `remove` - Remove user from raid
+  - `side` - Set side assignment (Lemuria only)
+  - `waitlist` - Add user to waitlist
+</ParamField>
+
+<ParamField path="raid_id" type="string" required>
+  Raid ID from the signup embed
+</ParamField>
+
+<ParamField path="user" type="user" required>
+  Discord user to assign/remove
+</ParamField>
+
+<ParamField path="position" type="integer">
+  Position number (1-12) or team number for key/challenge raids
+</ParamField>
+
+<ParamField path="role" type="string">
+  Alternative to position: role name or emoji (e.g., "Storm 1", "1️⃣")
+</ParamField>
+
+<ParamField path="side" type="choice">
+  Lemuria side assignment:
+  - `Left side (Bomb)`
+  - `Left side (Polymorph)`
+  - `Right side (Automaton)`
+  - `Right side (Bomb)`
+</ParamField>
+
+## Actions
+
+<Tabs>
+  <Tab title="Assign">
+    Add a user to a raid slot.
+    
+    **For regular raids:**
+    ```
+    /raidsignup action:assign raid_id:ABC123 user:@PlayerName position:3
+    ```
+    
+    You can also use role name instead of position:
+    ```
+    /raidsignup action:assign raid_id:ABC123 user:@PlayerName role:Storm 1
+    ```
+    
+    **For museum:**
+    ```
+    /raidsignup action:assign raid_id:ABC123 user:@PlayerName
+    ```
+    (Position not needed for museum signups)
+    
+    **For key boss/challenge:**
+    ```
+    /raidsignup action:assign raid_id:ABC123 user:@PlayerName position:2
+    ```
+    (Position = team number, 1-4)
+    
+    **Behavior:**
+    - Removes user from waitlist if present
+    - Moves user if already signed up for a different role
+    - Removes their reaction from old role
+    - Won't add if slot is full (unless they're replacing themselves)
+  </Tab>
+  <Tab title="Remove">
+    Remove a user from a raid.
+    
+    **For regular raids:**
+    ```
+    /raidsignup action:remove raid_id:ABC123 user:@PlayerName position:3
+    ```
+    
+    **For museum:**
+    ```
+    /raidsignup action:remove raid_id:ABC123 user:@PlayerName
+    ```
+    
+    **For key boss/challenge:**
+    ```
+    /raidsignup action:remove raid_id:ABC123 user:@PlayerName
+    ```
+    (Bot automatically finds which team they're on)
+    
+    **Behavior:**
+    - Removes user from the raid
+    - Clears their side assignment (if Lemuria)
+    - Removes their reaction
+    - Processes waitlist to fill vacant slot
+  </Tab>
+  <Tab title="Side (Lemuria)">
+    Set side assignment for Ghastly Conspiracy (Lemuria) raids.
+    
+    ```
+    /raidsignup action:side raid_id:ABC123 user:@PlayerName side:Left side (Bomb)
+    ```
+    
+    Available sides:
+    - Left side (Bomb)
+    - Left side (Polymorph)
+    - Right side (Automaton)
+    - Right side (Bomb)
+    
+    **Behavior:**
+    - User must already be signed up
+    - Only works for Lemuria raids
+    - Updates signup embed to show side assignment
+  </Tab>
+  <Tab title="Waitlist">
+    Add a user to the waitlist for a specific role.
+    
+    **For regular raids:**
+    ```
+    /raidsignup action:waitlist raid_id:ABC123 user:@PlayerName position:3
+    ```
+    Or:
+    ```
+    /raidsignup action:waitlist raid_id:ABC123 user:@PlayerName role:Jade
+    ```
+    
+    **For museum:**
+    ```
+    /raidsignup action:waitlist raid_id:ABC123 user:@PlayerName
+    ```
+    
+    **For key boss/challenge:**
+    ```
+    /raidsignup action:waitlist raid_id:ABC123 user:@PlayerName position:1
+    ```
+    (Position = team number)
+    
+    **Behavior:**
+    - Removes from main roster if present
+    - Adds to waitlist for that role/team
+    - If they vacate a main slot, waitlist may auto-promote
+    - Removes from other role waitlists
+  </Tab>
+</Tabs>
+
+## Role Selection
+
+When using `position` or `role` parameter, the bot accepts:
+
+1. **Position number** (e.g., `3`)
+2. **Role emoji** (e.g., `1️⃣`)
+3. **Role name** - exact match (e.g., `Storm 1`)
+4. **Role name** - partial match (e.g., `storm`) if unambiguous
+
+If multiple roles match, the bot asks you to be more specific.
+
+## Audit Logging
+
+All manual signup changes are logged to the audit channel with:
+- Who made the change
+- Target user
+- Raid ID
+- Role/position/team affected
+- Link to signup panel
+
+## Examples
+
+<CodeGroup>
+```text Assign to Storm 1
+/raidsignup action:assign raid_id:ABC123 user:@PlayerName position:3
+/raidsignup action:assign raid_id:ABC123 user:@PlayerName role:Storm 1
+```
+
+```text Remove from Museum
+/raidsignup action:remove raid_id:ABC123 user:@PlayerName
+```
+
+```text Set Lemuria Side
+/raidsignup action:assign raid_id:ABC123 user:@PlayerName role:Storm 1
+/raidsignup action:side raid_id:ABC123 user:@PlayerName side:Left side (Bomb)
+```
+
+```text Add to Waitlist
+/raidsignup action:waitlist raid_id:ABC123 user:@PlayerName role:Jade
+```
+
+```text Assign to Key Boss Team 2
+/raidsignup action:assign raid_id:ABC123 user:@PlayerName position:2
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/raid](/commands/raid) - Main raid management panel
+- [/create](/commands/create) - Create raids
+- [/raidinfo](/commands/raidinfo) - View raid details

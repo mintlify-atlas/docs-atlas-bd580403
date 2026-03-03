@@ -1,0 +1,265 @@
+---
+title: /permissions
+description: Configure which roles can use admin commands and sign up for raids
+---
+
+The `/permissions` command provides an interactive interface to configure role-based access control for admin commands and raid signups.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/permissions
+```
+
+## Permission Types
+
+RaidBot uses a flexible permission system:
+
+1. **Global Admin Roles** - Can use all admin commands
+2. **Per-Command Roles** - Can use specific admin commands
+3. **Signup Roles** - Can sign up for raids/museums
+4. **Special Permissions** - Stats viewing, etc.
+
+## Always Allowed
+
+These always bypass role checks:
+- **Server Owner** - Full access to everything
+- **Manage Server Permission** - Full access to admin commands
+
+## Interactive Panel
+
+The panel shows:
+- Current global admin roles
+- Selected command and its configured roles
+- Controls to add/remove roles
+
+### Panel Workflow
+
+1. Select a command/permission type from dropdown
+2. View currently configured roles
+3. Use role selector to add roles
+4. Click "Clear roles" to remove all
+
+## Configurable Commands
+
+<Tabs>
+  <Tab title="Global Admin">
+    Roles that can use **all** admin commands.
+    
+    **Grants access to:**
+    - All commands listed below
+    - All admin-only features
+    
+    **Use case:**
+    Set "Officer" or "Raid Leader" role here to give full access.
+  </Tab>
+  <Tab title="Raid Management">
+    **Individual command permissions:**
+    
+    `/create` - Create new raid signups
+    - Default: Global admin + Manage Server
+    
+    `/raid` - Manage raids (close/reopen/delete/etc.)
+    - Default: Global admin + Manage Server
+    
+    `/raidsignup` - Manually assign/remove signups
+    - Default: Global admin + Manage Server
+  </Tab>
+  <Tab title="Server Setup">
+    **Individual command permissions:**
+    
+    `/setchannel` - Configure signup channels
+    - Default: Global admin + Manage Server
+    
+    `/settings` - Configure bot settings
+    - Default: Global admin + Manage Server
+    
+    `/templates` - Manage raid templates
+    - Default: Global admin + Manage Server
+    
+    `/permissions` - Configure permissions (this command)
+    - Default: Global admin + Manage Server
+  </Tab>
+  <Tab title="Recurring & Polls">
+    **Individual command permissions:**
+    
+    `/recurring` - Manage recurring schedules
+    - Default: Global admin + Manage Server
+    
+    `/poll` - Create and manage polls
+    - Default: Global admin + Manage Server (for create/close/delete)
+  </Tab>
+  <Tab title="Raid Signups">
+    **Special permissions for who can sign up:**
+    
+    **Raid signup** - Who can react to raid signups
+    - Default: Everyone (empty = no restriction)
+    - Set roles to restrict signup access
+    
+    **Museum signup** - Who can react to museum signups
+    - Default: Everyone (empty = no restriction)
+    - Can be configured separately from raid signups
+    
+    **Use case:**
+    Restrict signups to "Guild Member" or "Verified" role.
+  </Tab>
+  <Tab title="Stats Viewing">
+    **View others' stats** - Who can use `/stats user` on other users
+    - Default: Admin only
+    - Set roles to allow non-admins to view others' stats
+    
+    **Use case:**
+    Allow "Officer" role to view member participation without full admin access.
+  </Tab>
+</Tabs>
+
+## Permission Inheritance
+
+**Hierarchy:**
+1. Server Owner (always allowed)
+2. Manage Server permission (always allowed for admin commands)
+3. Global admin roles
+4. Per-command roles
+
+**Example:**
+If user has:
+- "Officer" role (in Global admin)
+- No per-command roles
+
+They can use all admin commands.
+
+If user has:
+- "Raid Leader" role (in `/create` permissions only)
+- No global admin role
+
+They can only use `/create`.
+
+## Configuration Examples
+
+### Example 1: Simple Setup
+
+```
+Global admin roles: @Officer
+Raid signup: (empty - everyone)
+Museum signup: (empty - everyone)
+```
+
+Result:
+- Officers can use all admin commands
+- Everyone can sign up for raids and museums
+
+### Example 2: Restricted Signups
+
+```
+Global admin roles: @Officer
+Raid signup: @Guild Member
+Museum signup: @Guild Member, @Trial Member
+```
+
+Result:
+- Officers can use all admin commands
+- Only Guild Members can sign up for raids
+- Guild Members and Trial Members can sign up for museums
+
+### Example 3: Delegated Permissions
+
+```
+Global admin roles: @Officer
+/create: @Raid Leader
+/raid: @Raid Leader
+/poll: @Event Coordinator
+Raid signup: (empty - everyone)
+```
+
+Result:
+- Officers can use all admin commands
+- Raid Leaders can create and manage raids
+- Event Coordinators can create polls
+- Everyone can sign up
+
+### Example 4: Stats Access
+
+```
+Global admin roles: @Officer
+View others' stats: @Officer, @Recruiter
+```
+
+Result:
+- Officers have full admin access
+- Recruiters can view member stats but not manage raids
+
+## Using the Panel
+
+<CodeGroup>
+```text Set Global Admin
+/permissions
+→ Select "Global admin roles" from dropdown
+→ Use role selector to pick @Officer, @Raid Leader
+→ Both roles now have full admin access
+```
+
+```text Restrict Raid Signups
+/permissions
+→ Select "Raid signup" from dropdown
+→ Use role selector to pick @Guild Member
+→ Only Guild Members can sign up for raids
+```
+
+```text Allow Raid Leaders to Create Only
+/permissions
+→ Select "/create" from dropdown
+→ Use role selector to pick @Raid Leader
+→ Raid Leaders can create raids but not manage them
+```
+
+```text Clear All Roles for a Command
+/permissions
+→ Select "/poll" from dropdown
+→ Click "Clear roles"
+→ Only global admins and Manage Server can create polls
+```
+</CodeGroup>
+
+## Best Practices
+
+**Global Admin:**
+- Keep this limited to trusted leadership
+- Use per-command roles for delegation
+
+**Signup Restrictions:**
+- Only restrict if you have verification/onboarding
+- Consider separate museum permissions (lower barrier)
+- Test with an alt account to verify
+
+**Delegated Permissions:**
+- Give `/create` to experienced raiders
+- Keep `/raid` management more restricted
+- `/permissions` should stay admin-only
+
+**Stats Viewing:**
+- Consider allowing officers to view stats
+- Helps with recruitment and activity tracking
+- Doesn't grant raid management powers
+
+## Troubleshooting
+
+**"Missing Access" error:**
+- Check if user has Manage Server permission (bypasses roles)
+- Check if user has global admin role
+- Check if user has the specific command role
+- Verify roles are still valid (not deleted)
+
+**Can't sign up for raids:**
+- Check if signup roles are configured
+- Verify user has one of the allowed roles
+- Clear signup roles to allow everyone
+
+## Related Commands
+
+- [/settings](/commands/settings) - Other bot configuration
+- [/setchannel](/commands/setchannel) - Configure channels
+- [/templates](/commands/templates) - Manage templates

@@ -1,0 +1,297 @@
+---
+title: Permissions
+description: Configure role-based access control for commands and signups
+---
+
+RaidBot supports granular role-based permissions to control who can use specific commands and sign up for raids.
+
+## Permission Types
+
+RaidBot has three permission levels:
+
+<CardGroup cols={3}>
+  <Card title="Admin Roles" icon="user-shield">
+    Full access to all configuration and management commands
+  </Card>
+  <Card title="Command Roles" icon="terminal">
+    Access to specific commands on a per-command basis
+  </Card>
+  <Card title="Signup Roles" icon="user-check">
+    Required roles to sign up for raids
+  </Card>
+</CardGroup>
+
+## Default Permissions
+
+By default, RaidBot uses Discord's built-in permission system:
+
+- **Manage Server** permission grants access to configuration commands
+- Anyone can use `/create` and sign up for raids
+- No signup role restrictions
+
+You can override these defaults using role-based permissions.
+
+## Admin Roles
+
+Admin roles grant full access to all bot configuration commands including:
+
+- `/setchannel` — Configure posting channels
+- `/settings` — Configure reminders and automation
+- `/templates` — Manage raid templates
+- `/permissions` — Manage role permissions
+- `/raidsignup` — Manual signup management
+
+### Setting Admin Roles
+
+Use the `/permissions` command to configure admin roles:
+
+```
+/permissions
+```
+
+This opens an interactive panel where you can:
+
+1. Select "Manage Admin Roles"
+2. Choose one or more roles from the role selector
+3. Confirm to save
+
+<Note>
+  Users with Discord's "Manage Server" permission can configure admin roles even if they don't have an assigned admin role.
+</Note>
+
+### Admin Role Storage
+
+Admin roles are stored per-guild in the database (state.js:310-344):
+
+- **Table:** `admin_roles`
+- **Fields:** `guild_id`, `role_id`
+- **Access:** Multiple roles can be assigned per guild
+
+Changes are persisted immediately when roles are updated.
+
+## Command Permissions
+
+Command permissions allow you to restrict specific commands to certain roles. This is useful for:
+
+- Limiting `/create` to raid leaders only
+- Restricting `/recurring` to admins
+- Controlling access to `/stats` exports
+
+### Setting Command Permissions
+
+Use the `/permissions` command:
+
+```
+/permissions
+```
+
+1. Select "Manage Command Permissions"
+2. Choose the command from the dropdown
+3. Select required roles
+4. Confirm to save
+
+### Available Commands for Restriction
+
+These commands support role-based restrictions (state.js:384-425):
+
+- `/create` — Raid creation
+- `/raid` — Raid management panel
+- `/recurring` — Recurring raid schedules
+- `/raidsignup` — Manual signup edits
+- `/raidinfo` — Raid information and exports
+- `/stats` — Statistics and analytics
+- `/availability` — Availability tracking
+- `/poll` — Time slot polling
+
+<Warning>
+  Configuration commands (`/setchannel`, `/settings`, `/templates`, `/permissions`) always require admin roles or "Manage Server" permission and cannot be restricted separately.
+</Warning>
+
+### Command Permission Storage
+
+Command permissions are stored per-guild and per-command (state.js:384-425):
+
+- **Table:** `command_permissions`
+- **Fields:** `guild_id`, `command_name`, `role_id`
+- **Access:** Multiple roles can be assigned per command
+
+## Signup Roles
+
+Signup roles restrict who can sign up for raids. Users must have at least one of the configured signup roles to participate.
+
+### When to Use Signup Roles
+
+- **Member verification:** Require a "Verified" role before signing up
+- **Active members only:** Restrict to active raider roles
+- **Tier-based access:** Different roles for different raid difficulties
+
+### Setting Signup Roles
+
+Use the `/permissions` command:
+
+```
+/permissions
+```
+
+1. Select "Manage Signup Roles"
+2. Choose required roles from the role selector
+3. Confirm to save
+
+<Note>
+  Users need at least ONE of the configured signup roles. If multiple roles are set, having any of them grants signup access.
+</Note>
+
+### Signup Role Storage
+
+Signup roles are stored per-guild (state.js:347-381):
+
+- **Table:** `signup_roles`
+- **Fields:** `guild_id`, `role_id`
+- **Access:** Multiple roles can be assigned per guild
+
+### Signup Enforcement
+
+When signup roles are configured:
+
+1. User clicks a signup reaction
+2. Bot checks if user has any of the required roles
+3. If missing, bot sends ephemeral message with required roles
+4. If present, signup proceeds normally
+
+## Permission Checks
+
+RaidBot checks permissions in this order:
+
+<Steps>
+  <Step title="Discord Permissions">
+    Check if user has "Manage Server" or "Administrator" permission
+  </Step>
+  <Step title="Admin Roles">
+    Check if user has any configured admin role
+  </Step>
+  <Step title="Command Roles">
+    For specific commands, check if user has required command roles
+  </Step>
+  <Step title="Signup Roles">
+    For signups, check if user has required signup roles
+  </Step>
+</Steps>
+
+## Command-Specific Permissions
+
+Some commands have built-in permission requirements:
+
+### Requires Manage Server or Admin Role
+
+- `/setchannel` (commands/setchannel.js:48)
+- `/settings` (commands/settings.js:37)
+- `/templates` (commands/templates.js:26)
+- `/permissions`
+
+### Respects Command Roles
+
+- `/create`
+- `/raid`
+- `/recurring`
+- `/raidsignup`
+- `/raidinfo`
+- `/stats`
+
+### Public Access (No Restrictions)
+
+- `/help`
+- `/ping`
+- `/changelog`
+
+## Viewing Current Permissions
+
+Use `/permissions` to view current configuration:
+
+```
+/permissions
+```
+
+The panel displays:
+
+- **Admin Roles:** Roles with full configuration access
+- **Command Permissions:** Per-command role requirements
+- **Signup Roles:** Roles required to join raids
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Least Privilege" icon="shield-check">
+    Only grant admin roles to trusted members who need configuration access.
+  </Card>
+  <Card title="Clear Role Names" icon="tag">
+    Use descriptive role names like "Raid Leader" instead of generic names.
+  </Card>
+  <Card title="Regular Audits" icon="clipboard-list">
+    Periodically review permission configuration to ensure it matches your needs.
+  </Card>
+  <Card title="Test Changes" icon="flask">
+    Test permission changes with a non-admin account to verify behavior.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="User can't access command">
+    1. Check if the command requires admin or specific roles
+    2. Verify the user has the required role(s)
+    3. Ensure role is not below bot's role in hierarchy
+    4. Check if user has "Manage Server" permission (bypasses role checks)
+  </Accordion>
+
+  <Accordion title="User can't sign up for raids">
+    1. Check if signup roles are configured
+    2. Verify the user has at least one signup role
+    3. Ensure signup roles are assigned correctly
+    4. Check for role hierarchy issues
+  </Accordion>
+
+  <Accordion title="Permission changes not saving">
+    1. Ensure you have "Manage Server" or admin role
+    2. Check database write permissions
+    3. Look for errors in debug channel if configured
+  </Accordion>
+
+  <Accordion title="Admin role not working">
+    1. Verify role is assigned to user correctly
+    2. Check role isn't below bot's role
+    3. Ensure role ID is stored in database
+    4. Try removing and re-adding the admin role
+  </Accordion>
+</AccordionGroup>
+
+## Database Schema
+
+Permissions are stored in three tables:
+
+<CodeGroup>
+```sql admin_roles
+CREATE TABLE admin_roles (
+  guild_id TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, role_id)
+);
+```
+
+```sql command_permissions
+CREATE TABLE command_permissions (
+  guild_id TEXT NOT NULL,
+  command_name TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, command_name, role_id)
+);
+```
+
+```sql signup_roles
+CREATE TABLE signup_roles (
+  guild_id TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, role_id)
+);
+```
+</CodeGroup>

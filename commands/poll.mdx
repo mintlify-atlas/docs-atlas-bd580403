@@ -1,0 +1,215 @@
+---
+title: /poll
+description: Create time slot polls to find optimal raid times
+---
+
+The `/poll` command creates reaction-based polls with multiple time options, perfect for finding when the most members can participate.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/poll <create|list|results|close|delete> [...options]
+```
+
+## Subcommands
+
+<Tabs>
+  <Tab title="Create">
+    Create a new time slot poll.
+    
+    ```
+    /poll create title:"Weekly Raid Time" options:"Sat 7pm, Sat 8pm, Sun 3pm" [duration:24]
+    ```
+    
+    <ParamField path="title" type="string" required>
+      Poll title (e.g., "Weekly Raid Time")
+    </ParamField>
+    
+    <ParamField path="options" type="string" required>
+      Time slots, comma-separated (e.g., "Sat 7pm, Sat 8pm, Sun 3pm")
+      - Minimum 2 options
+      - Maximum 10 options
+    </ParamField>
+    
+    <ParamField path="duration" type="integer">
+      Hours until poll auto-closes (0 = no auto-close, max 168)
+    </ParamField>
+    
+    **Result:**
+    - Posts poll message with numbered reactions (1️⃣, 2️⃣, 3️⃣, etc.)
+    - Users vote by reacting
+    - Can vote for multiple options
+    - Shows live vote counts
+    - Highlights top 3 choices
+  </Tab>
+  <Tab title="List">
+    List recent polls in the server.
+    
+    ```
+    /poll list
+    ```
+    
+    Shows up to 10 recent polls with:
+    - Poll title and ID
+    - Status (✅ Open or 🔒 Closed)
+    - Created time
+    - Jump link to poll message
+  </Tab>
+  <Tab title="Results">
+    View current voting breakdown.
+    
+    ```
+    /poll results id:ABC123
+    ```
+    
+    <ParamField path="id" type="string" required>
+      Poll ID
+    </ParamField>
+    
+    **Output includes:**
+    - Vote count for each option
+    - Progress bars
+    - List of voters (up to 10 shown per option)
+    - Total voters
+    - Top 3 choices highlighted
+  </Tab>
+  <Tab title="Close">
+    Close a poll and show final results.
+    
+    ```
+    /poll close id:ABC123
+    ```
+    
+    <ParamField path="id" type="string" required>
+      Poll ID
+    </ParamField>
+    
+    **Result:**
+    - Poll marked as closed
+    - Original message updated with "Poll Closed" status
+    - Final results posted with:
+      - 🥇🥈🥉 medals for top 3 options
+      - Vote counts
+      - Full voter lists
+  </Tab>
+  <Tab title="Delete">
+    Delete a poll permanently.
+    
+    ```
+    /poll delete id:ABC123
+    ```
+    
+    <ParamField path="id" type="string" required>
+      Poll ID
+    </ParamField>
+    
+    Deletes the poll message and removes from database.
+  </Tab>
+</Tabs>
+
+## Poll Display
+
+Polls show real-time results:
+
+```
+📊 Weekly Raid Time
+
+React with a number to vote for your preferred time(s)!
+
+1️⃣ Saturday 7pm — 18 votes ██████████
+2️⃣ Saturday 8pm — 15 votes ████████
+3️⃣ Sunday 3pm — 12 votes ██████
+4️⃣ Friday 8pm — 8 votes ████
+
+Total Voters: 24
+
+🏆 Top Choices:
+🥇 Saturday 7pm (18 votes)
+🥈 Saturday 8pm (15 votes)
+🥉 Sunday 3pm (12 votes)
+
+Poll ID: ABC123 • Closes: in 23 hours
+```
+
+## Auto-Close
+
+If you set a duration:
+- Poll automatically closes after the specified hours
+- Original message updates to show "Poll Closed"
+- Final results are not automatically posted (use `/poll results` or `/poll close`)
+
+## Use Cases
+
+**Find recurring raid time:**
+```
+/poll create title:"Weekly Dragonspyre Time" options:"Sat 7pm, Sat 8pm, Sun 3pm, Sun 7pm" duration:48
+```
+
+**Choose between raid types:**
+```
+/poll create title:"This Week's Raid" options:"Dragonspyre, Lemuria, Polaris" duration:24
+```
+
+**Select event date:**
+```
+/poll create title:"Museum Run Date" options:"This Saturday, Next Saturday, Next Sunday"
+```
+
+## Voting Mechanics
+
+- Users can vote for **multiple options** (multi-select)
+- Adding/removing reactions updates vote counts in real-time
+- Progress bars show relative popularity (max 10 bars = 100%)
+- Top 3 choices are highlighted with 🥇🥈🥉 medals
+
+## Examples
+
+<CodeGroup>
+```text Create Weekend Time Poll
+/poll create title:"Weekend Raid Time" options:"Sat 6pm, Sat 7pm, Sat 8pm, Sun 2pm, Sun 3pm" duration:48
+```
+
+```text View All Polls
+/poll list
+```
+
+```text Check Current Results
+/poll results id:ABC123
+```
+
+```text Close and Announce Winners
+/poll close id:ABC123
+```
+
+```text Delete Old Poll
+/poll delete id:ABC123
+```
+</CodeGroup>
+
+## Integration with Availability
+
+For more sophisticated availability tracking, see [/availability](/commands/availability), which:
+- Stores recurring availability windows
+- Parses complex time patterns
+- Provides heatmaps and optimal time finding
+- Integrates with substitute finder
+
+**Polls are best for:**
+- One-time decisions
+- Choosing between specific options
+- Quick visual feedback
+
+**Availability is best for:**
+- Ongoing scheduling
+- Finding optimal recurring times
+- Cross-timezone coordination
+
+## Related Commands
+
+- [/availability](/commands/availability) - Set recurring availability
+- [/recurring](/commands/recurring) - Create automatic recurring raids
+- [/create](/commands/create) - Create raids after deciding time

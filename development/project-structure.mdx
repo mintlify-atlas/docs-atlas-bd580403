@@ -1,0 +1,705 @@
+---
+title: Project Structure
+description: Navigate the RaidBot codebase with this detailed guide to the project organization
+---
+
+## Overview
+
+RaidBot follows a modular architecture with clear separation of concerns. The codebase consists of 68 JavaScript files organized into logical directories.
+
+```
+wizbot/
+├── bot.js                    # Main entry point
+├── package.json              # Dependencies and scripts
+├── config.example.json       # Configuration template
+├── commands/                 # Slash command handlers (18 files)
+├── raids/                    # Raid logic and reactions (2 files)
+├── utils/                    # Utility functions (18 files)
+├── db/                       # Database layer (6 files)
+├── tests/                    # Test suites (15 files)
+├── data/                     # Runtime data (gitignored)
+│   └── wizbot.db            # SQLite database
+└── *.js                      # Feature modules (10 files)
+```
+
+## Root Directory
+
+### Core Files
+
+<ResponseField name="bot.js" type="file">
+  **Main application entry point** (413 lines)
+  
+  Responsibilities:
+  - Initialize Discord client with required intents
+  - Load state from database on startup
+  - Register slash commands
+  - Route interactions to handlers
+  - Handle graceful shutdown
+  
+  ```javascript bot.js
+  const client = new Client({
+      intents: [
+          GatewayIntentBits.Guilds,
+          GatewayIntentBits.GuildMessages,
+          GatewayIntentBits.GuildMessageReactions,
+          GatewayIntentBits.GuildMembers
+      ],
+      partials: [Partials.Message, Partials.Channel, Partials.Reaction]
+  });
+  
+  client.once('clientReady', async () => {
+      // Load all state
+      loadRaidChannels();
+      loadGuildSettings();
+      
+      // Initialize systems
+      await registerCommands();
+      await reinitializeRaids(client);
+      startReminderScheduler();
+  });
+  ```
+</ResponseField>
+
+<ResponseField name="state.js" type="file">
+  **State management layer** (800+ lines)
+  
+  Hybrid state management with in-memory caches backed by SQLite:
+  - `activeRaids` - Map of active raid data by message ID
+  - `raidChannels` - Guild → channel ID mappings
+  - `guildSettings` - Guild configuration cache
+  - `raidStats` - User participation statistics
+  
+  ```javascript state.js
+  // In-memory caches for fast access
+  const activeRaids = new Map();
+  const raidChannels = new Map();
+  const guildSettings = new Map();
+  
+  // Database-backed setters
+  function setActiveRaid(messageId, raidData) {
+      activeRaids.set(messageId, raidData);
+      // Immediately persist to database
+      statements.insertRaid.run(serializeRaid(messageId, raidData));
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="reminderScheduler.js" type="file">
+  **Automated reminder and auto-close system** (400+ lines)
+  
+  Runs every 60 seconds to:
+  - Send creator reminders before raid starts
+  - Send participant reminders to all signups
+  - Auto-close full raids at configured threshold
+  - Auto-close museum raids at start time
+  - Check and spawn recurring raids
+  
+  ```javascript reminderScheduler.js
+  const CHECK_INTERVAL_MS = 60 * 1000;
+  
+  async function runReminderCheck() {
+      for (const [messageId, raidData] of activeRaids.entries()) {
+          const secondsUntil = raidData.timestamp - now;
+          
+          if (secondsUntil <= settings.creatorReminderSeconds) {
+              await sendCreatorReminder(client, raidData);
+          }
+          
+          if (isRaidFull(raidData) && secondsUntil <= settings.autoCloseSeconds) {
+              await autoCloseRaid(client, raidData);
+          }
+      }
+  }
+  ```
+</ResponseField>
+
+### Feature Modules
+
+<ResponseField name="recurringManager.js" type="file">
+  Schedule recurring raids with cron-like patterns (weekly, daily, custom intervals)
+</ResponseField>
+
+<ResponseField name="availabilityManager.js" type="file">
+  User availability tracking with heatmap aggregation for 50+ users
+</ResponseField>
+
+<ResponseField name="pollManager.js" type="file">
+  Time slot polling system with live vote tracking
+</ResponseField>
+
+<ResponseField name="templatesManager.js" type="file">
+  Per-guild raid template customization (enable/disable, rename)
+</ResponseField>
+
+<ResponseField name="auditLog.js" type="file">
+  Audit logging for admin actions and signup modifications
+</ResponseField>
+
+<ResponseField name="presence.js" type="file">
+  Bot status updates with active raid count
+</ResponseField>
+
+## Commands Directory
+
+18 slash command handlers implementing Discord.js command builders.
+
+### Command Structure
+
+```javascript commands/example.js
+const { SlashCommandBuilder } = require('discord.js');
+
+module.exports = {
+    data: new SlashCommandBuilder()
+        .setName('commandname')
+        .setDescription('Description'),
+    requiresManageGuild: true,  // Optional permission check
+    async execute(interaction) {
+        // Command logic
+    }
+};
+```
+
+### Key Commands
+
+<AccordionGroup>
+  <Accordion title="create.js - Interactive raid creation (1,100+ lines)">
+    Modal-based raid creation flow with natural language time parsing.
+    
+    **Features:**
+    - Template selection for different raid types
+    - Natural language time input ("tomorrow 7pm", "next Friday 6:30pm")
+    - Optional duration and strategy fields
+    - Automatic reaction setup based on template
+    
+    ```javascript commands/create.js
+    async execute(interaction) {
+        const modal = new ModalBuilder()
+            .setCustomId('raid:create')
+            .setTitle('Create Raid')
+            .addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('datetime')
+                        .setLabel('Date and Time')
+                        .setPlaceholder('tomorrow 7pm, next Friday 6:30pm')
+                )
+            );
+        
+        await interaction.showModal(modal);
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="raid.js - Raid management panel (1,500+ lines)">
+    Comprehensive raid management with action buttons.
+    
+    **Actions:**
+    - Close signups (manual close with analytics)
+    - Reopen signups (with confirmation)
+    - Delete raid (with cascade cleanup)
+    - Change time (reschedule with notifications)
+    - Mark attendance (track no-shows)
+    
+    ```javascript commands/raid.js
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+            .setCustomId('raid:close')
+            .setLabel('Close Signups')
+            .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+            .setCustomId('raid:reopen')
+            .setLabel('Reopen')
+            .setStyle(ButtonStyle.Success)
+    );
+    ```
+  </Accordion>
+  
+  <Accordion title="stats.js - Unified analytics (600+ lines)">
+    Comprehensive statistics with multiple views.
+    
+    **Views:**
+    - User stats (personal participation, role distribution)
+    - Server stats (leaderboard, top roles)
+    - Weekly/monthly trends
+    - Inactive member detection
+    - CSV export for external analysis
+    
+    ```javascript commands/stats.js
+    .addSubcommand(subcommand =>
+        subcommand
+            .setName('user')
+            .setDescription('View user statistics')
+            .addUserOption(option =>
+                option.setName('user')
+                    .setDescription('User to view stats for')
+            )
+    )
+    ```
+  </Accordion>
+  
+  <Accordion title="recurring.js - Scheduled raids (1,200+ lines)">
+    Manage recurring raid schedules with spawn time customization.
+    
+    **Subcommands:**
+    - `create` - Set up recurring schedule
+    - `list` - View active schedules
+    - `delete` - Remove schedule
+    - `toggle` - Enable/disable without deleting
+    - `trigger` - Manually spawn next raid
+    
+    ```javascript commands/recurring.js
+    .addStringOption(option =>
+        option.setName('interval')
+            .setDescription('How often to create raids')
+            .setRequired(true)
+            .addChoices(
+                { name: 'Daily', value: 'daily' },
+                { name: 'Weekly', value: 'weekly' },
+                { name: 'Custom', value: 'custom' }
+            )
+    )
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Full Command List
+
+| File | Command | Lines | Description |
+|------|---------|-------|-------------|
+| `availability.js` | `/availability` | 900+ | User availability tracking and heatmaps |
+| `changelog.js` | `/changelog` | 100 | View release notes |
+| `create.js` | `/create` | 1,100+ | Interactive raid/museum creation |
+| `help.js` | `/help` | 500+ | Command documentation |
+| `leaderboard.js` | `/leaderboard` | 300+ | Server participation leaderboard |
+| `permissionspanel.js` | `/permissions` | 250+ | Role-based permission configuration |
+| `ping.js` | `/ping` | 50 | Bot health check |
+| `poll.js` | `/poll` | 400+ | Time slot polling |
+| `raid.js` | `/raid` | 1,500+ | Raid management panel |
+| `raidinfo.js` | `/raidinfo` | 400+ | List/view/export raids |
+| `raidsignup.js` | `/raidsignup` | 1,200+ | Admin signup modifications |
+| `recurring.js` | `/recurring` | 1,200+ | Recurring raid schedules |
+| `setchannel.js` | `/setchannel` | 400+ | Configure raid channels |
+| `settings.js` | `/settings` | 450+ | Reminder and auto-close settings |
+| `stats.js` | `/stats` | 600+ | Unified analytics |
+| `templates.js` | `/templates` | 750+ | Template customization |
+| `testalert.js` | `/testalert` | 50 | Test performance alerts |
+
+<ResponseField name="index.js" type="file">
+  Command registry that exports all commands:
+  
+  ```javascript commands/index.js
+  module.exports = [
+      require('./availability'),
+      require('./create'),
+      require('./raid'),
+      // ... all commands
+  ];
+  ```
+</ResponseField>
+
+<ResponseField name="registerCommands.js" type="file">
+  Registers slash commands with Discord API:
+  
+  ```javascript commands/registerCommands.js
+  async function registerCommands(clientId, token, commands) {
+      const rest = new REST({ version: '10' }).setToken(token);
+      const commandData = commands.map(cmd => cmd.data.toJSON());
+      
+      await rest.put(
+          Routes.applicationCommands(clientId),
+          { body: commandData }
+      );
+  }
+  ```
+</ResponseField>
+
+## Raids Directory
+
+Core raid logic and reaction handling.
+
+<ResponseField name="reactionHandlers.js" type="file">
+  **Concurrency-safe reaction processing** (600+ lines)
+  
+  Handles all reaction-based signups with mutex locks to prevent race conditions:
+  
+  ```javascript raids/reactionHandlers.js
+  const locks = new Map(); // messageId -> Mutex
+  
+  async function handleReactionAdd(reaction, user) {
+      // Acquire lock for this specific raid
+      const lock = getLock(reaction.message.id);
+      const release = await lock.acquire();
+      
+      try {
+          // Rate limit check
+          if (!reactionLimiter.isAllowed(user.id)) {
+              await reaction.users.remove(user.id);
+              return;
+          }
+          
+          // Process signup atomically
+          const raidData = activeRaids.get(reaction.message.id);
+          if (raidData.closed) {
+              await reaction.users.remove(user.id);
+              return;
+          }
+          
+          // Add to role or waitlist
+          const roleIndex = raidData.signups.findIndex(
+              r => r.emoji === reaction.emoji.name
+          );
+          // ... signup logic
+      } finally {
+          release();
+      }
+  }
+  ```
+  
+  **Features:**
+  - Per-raid mutex locks prevent concurrent modifications
+  - Rate limiting (5 reactions per 10 seconds per user)
+  - Automatic waitlist management with DM notifications
+  - Support for raid, museum, key boss, and challenge mode signups
+</ResponseField>
+
+<ResponseField name="reinitialize.js" type="file">
+  **Raid state recovery on bot restart** (1,100+ lines)
+  
+  Reinitializes all active raids from database:
+  
+  ```javascript raids/reinitialize.js
+  async function reinitializeRaids(client) {
+      for (const [messageId, raidData] of activeRaids.entries()) {
+          try {
+              // Fetch raid message from Discord
+              const channel = await client.channels.fetch(raidData.channelId);
+              const message = await channel.messages.fetch(messageId);
+              
+              // Re-add reactions if missing
+              for (const role of raidData.signups) {
+                  if (!message.reactions.cache.has(role.emoji)) {
+                      await message.react(role.emoji);
+                  }
+              }
+              
+              logger.info('Raid reinitialized', { raidId: raidData.raidId });
+          } catch (error) {
+              logger.warn('Failed to reinitialize raid', { messageId, error });
+          }
+      }
+  }
+  ```
+</ResponseField>
+
+## Utils Directory
+
+18 utility modules providing shared functionality.
+
+### Core Utilities
+
+<AccordionGroup>
+  <Accordion title="logger.js - Structured logging (210 lines)">
+    Contextual logging with multiple severity levels.
+    
+    ```javascript utils/logger.js
+    const logger = new Logger({
+        level: process.env.LOG_LEVEL || 'INFO',
+        colorize: true,
+        logToFile: process.env.LOG_TO_FILE === 'true'
+    });
+    
+    logger.info('Raid created', {
+        raidId: 'A1',
+        guildId: '123',
+        userId: '456'
+    });
+    
+    // [2026-03-03T10:30:00.000Z] [INFO] [wizbot] Raid created
+    ```
+    
+    **Features:**
+    - DEBUG, INFO, WARN, ERROR levels
+    - Structured JSON output
+    - File rotation at 5MB
+    - Child loggers with context
+  </Accordion>
+  
+  <Accordion title="circuitBreaker.js - Fault tolerance (220 lines)">
+    Circuit breaker pattern for Discord API resilience.
+    
+    ```javascript utils/circuitBreaker.js
+    const discordApiBreaker = new CircuitBreaker({
+        name: 'discord-api',
+        failureThreshold: 5,      // Open after 5 failures
+        successThreshold: 2,      // Close after 2 successes
+        timeout: 60000            // Try half-open after 1 minute
+    });
+    
+    await discordApiBreaker.execute(async () => {
+        await channel.send('Message');
+    }, () => {
+        // Fallback function
+        logger.warn('Circuit open, skipping message');
+    });
+    ```
+    
+    **States:**
+    - CLOSED - Normal operation
+    - OPEN - Reject immediately
+    - HALF_OPEN - Testing recovery
+  </Accordion>
+  
+  <Accordion title="rateLimiter.js - Rate limiting (124 lines)">
+    Sliding window rate limiting for reactions and commands.
+    
+    ```javascript utils/rateLimiter.js
+    const reactionLimiter = new RateLimiter({ 
+        maxRequests: 5, 
+        windowMs: 10000 
+    });
+    
+    if (!reactionLimiter.isAllowed(user.id)) {
+        return 'You\'re reacting too quickly!';
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="raidHelpers.js - Raid utilities (800+ lines)">
+    Embed generation and raid manipulation functions.
+    
+    ```javascript utils/raidHelpers.js
+    function updateRaidEmbed(message, raidData) {
+        const embed = new EmbedBuilder()
+            .setTitle(raidData.template.name)
+            .setDescription(`**Time:** ${formatTimeLabel(raidData)}\n**Strategy:** ${raidData.strategy || 'None'}`);
+        
+        for (const role of raidData.signups) {
+            const users = role.users.map(id => `<@${id}>`).join(', ');
+            const waitlist = role.waitlist.length > 0 
+                ? `\n*Waitlist:* ${role.waitlist.map(id => `<@${id}>`).join(', ')}`
+                : '';
+            embed.addFields({
+                name: `${role.emoji} ${role.name} (${role.users.length}/${role.slots})`,
+                value: users || 'No signups' + waitlist
+            });
+        }
+        
+        return message.edit({ embeds: [embed] });
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Full Utility List
+
+| File | Purpose | Key Functions |
+|------|---------|---------------|
+| `alerts.js` | Performance monitoring | `initializeAlerts()`, `sendAlert()` |
+| `analytics.js` | Stats aggregation | `calculateTrends()`, `getInactiveMembers()` |
+| `circuitBreaker.js` | Fault tolerance | `withCircuitBreaker()`, `sendDMWithBreaker()` |
+| `config.js` | Configuration loading | Loads config.json or environment variables |
+| `dmRetry.js` | DM delivery retry | `sendDMWithRetry()` |
+| `errorMessages.js` | User-friendly errors | `formatError()`, `getErrorMessage()` |
+| `idGenerator.js` | Raid ID generation | `generateRaidId()` (A1-Z9 format) |
+| `logger.js` | Structured logging | `logger.info()`, `logger.error()` |
+| `metrics.js` | Prometheus metrics | `incrementCounter()`, `recordHistogram()` |
+| `raidFormatters.js` | Time/link formatting | `formatTimeLabel()`, `buildMessageLink()` |
+| `raidHelpers.js` | Raid manipulation | `updateRaidEmbed()`, `closeRaidSignup()` |
+| `raidTypes.js` | Type checking | `isTeamBased()`, `getTeamTypeLabel()` |
+| `rateLimiter.js` | Rate limiting | `reactionLimiter.isAllowed()` |
+| `timezoneHelper.js` | Timezone conversion | `parseTimezone()`, `convertToUTC()` |
+| `userLabels.js` | User display names | `getUserLabel()`, `getUserLabels()` |
+| `validators.js` | Input validation | `validateTimezone()`, `validateDays()` |
+| `waitlistNotifications.js` | Waitlist promotion | `processWaitlistOpenings()` |
+
+## Database Directory
+
+SQLite database layer with migrations and utilities.
+
+<ResponseField name="database.js" type="file">
+  **Database connection and schema management** (174 lines)
+  
+  ```javascript db/database.js
+  const db = new Database(DB_PATH);
+  
+  // Enable WAL mode for concurrent performance
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  
+  function initializeSchema() {
+      const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
+      db.exec(schema);
+      runMigrations();
+  }
+  
+  function prepare(sql) {
+      return db.prepare(sql);
+  }
+  
+  function transaction(fn) {
+      return db.transaction(fn);
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="schema.sql" type="file">
+  **Database schema definition** (200+ lines)
+  
+  **Tables:**
+  - `guilds` - Guild configuration
+  - `raids` - Active and historical raids
+  - `signups` - Normalized signup data
+  - `user_stats` - Global user statistics
+  - `guild_user_stats` - Per-guild statistics
+  - `recurring_raids` - Scheduled raids
+  - `availability` - User availability windows
+  - `polls` - Time slot polls
+  - `admin_roles` - Permission configuration
+  
+  ```sql schema.sql
+  CREATE TABLE IF NOT EXISTS raids (
+    message_id TEXT PRIMARY KEY,
+    raid_id TEXT,
+    guild_id TEXT,
+    type TEXT DEFAULT 'raid',
+    timestamp INTEGER,
+    creator_id TEXT,
+    closed_at INTEGER,
+    version INTEGER DEFAULT 1,
+    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+  );
+  ```
+</ResponseField>
+
+<ResponseField name="migrate.js" type="file">
+  **JSON to SQLite migration script** (500+ lines)
+  
+  Imports legacy JSON data files into SQLite database:
+  ```bash
+  node db/migrate.js
+  ```
+</ResponseField>
+
+### Utility Scripts
+
+| File | Purpose |
+|------|----------|
+| `import-csv-stats.js` | Import stats from CSV files |
+| `repair-stats.js` | Recalculate stats from raid history |
+| `restore-stats.js` | Restore stats from backup |
+
+## Tests Directory
+
+15 test files using Node.js built-in test runner.
+
+```javascript tests/example.test.js
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+test('description', () => {
+    assert.equal(actual, expected);
+});
+```
+
+### Test Coverage
+
+| File | Tests | Coverage Area |
+|------|-------|---------------|
+| `statePersistence.test.js` | State management | activeRaids persistence |
+| `waitlistNotifications.test.js` | Waitlist logic | Promotion and DM sending |
+| `reactionHandlers.test.js` | Reaction handling | Signup processing |
+| `rateLimiter.test.js` | Rate limiting | Sliding window algorithm |
+| `validators.test.js` | Input validation | Timezone, time, role validation |
+| `chrono.test.js` | Time parsing | Natural language dates |
+| `permissions.test.js` | Access control | Role-based permissions |
+| `poll.test.js` | Polling system | Vote recording |
+| `availability.test.js` | Availability | Time window parsing |
+
+See the [Testing Guide](/development/testing) for how to run tests.
+
+## Data Directory
+
+Runtime data storage (excluded from git).
+
+```
+data/
+├── wizbot.db          # SQLite database (main)
+├── wizbot.db-shm      # Shared memory (WAL mode)
+├── wizbot.db-wal      # Write-ahead log (WAL mode)
+```
+
+<Warning>
+Never commit the `data/` directory to version control. It contains production data and is excluded in `.gitignore`.
+</Warning>
+
+## Configuration
+
+<ResponseField name="config.json" type="file">
+  Bot configuration (not in repo, created from example):
+  
+  ```json config.json
+  {
+    "clientId": "YOUR_CLIENT_ID",
+    "token": "YOUR_BOT_TOKEN",
+    "allowedGuildIds": ["GUILD_ID_1"],
+    "ownerId": "YOUR_USER_ID"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="package.json" type="file">
+  Dependencies and scripts:
+  
+  ```json package.json
+  {
+    "scripts": {
+      "test": "node --test --test-force-exit"
+    },
+    "dependencies": {
+      "discord.js": "^14.24.2",
+      "better-sqlite3": "^12.5.0",
+      "chrono-node": "^2.9.0",
+      "async-mutex": "^0.5.0",
+      "dotenv": "^17.2.3"
+    }
+  }
+  ```
+</ResponseField>
+
+## Navigation Tips
+
+<Steps>
+  <Step title="Start with bot.js">
+    Understand the initialization flow and event handling
+  </Step>
+  
+  <Step title="Explore state.js">
+    Learn how data is stored and retrieved
+  </Step>
+  
+  <Step title="Read command files">
+    See how user interactions are handled
+  </Step>
+  
+  <Step title="Study raid logic">
+    Understand reaction handling and concurrency control
+  </Step>
+  
+  <Step title="Review utilities">
+    Learn about reusable functions and patterns
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the system design
+  </Card>
+  <Card title="Testing" icon="flask" href="/development/testing">
+    Write and run tests
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/development/contributing">
+    Start contributing code
+  </Card>
+</CardGroup>

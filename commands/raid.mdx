@@ -1,0 +1,148 @@
+---
+title: /raid
+description: Interactive management panel for raid signups
+---
+
+The `/raid` command opens an interactive management panel for a specific raid, allowing you to close, reopen, delete, change the time, manage no-shows, find substitutes, and duplicate raids.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/raid raid_id:<raid_id>
+```
+
+<ParamField path="raid_id" type="string" required>
+  The Raid ID shown at the bottom of the signup embed (e.g., `ABC123`)
+</ParamField>
+
+## Management Panel
+
+The panel displays current raid information and provides action buttons:
+
+### Panel Information
+
+- **Raid ID** - The unique identifier for this raid
+- **Type** - Raid template name, museum, key boss, or challenge mode
+- **Status** - Open or Closed
+- **Signup Link** - Direct link to the signup message
+
+### Available Actions
+
+<Tabs>
+  <Tab title="Close/Reopen">
+    **Close**
+    - Prevents new signups
+    - Updates embed to show "Closed" status
+    - Notifies participants via DM (if enabled)
+    - Logs to audit channel
+    
+    **Reopen**
+    - Re-enables signups
+    - Updates embed to show "Open" status
+    - Logs to audit channel
+  </Tab>
+  <Tab title="Change Time">
+    Opens a modal to update the raid time:
+    - Enter new date/time (natural language or timestamp)
+    - Updates signup embed automatically
+    - Resets reminder flags (will send reminders again)
+    - Logs to audit channel
+  </Tab>
+  <Tab title="Change Length">
+    For raids only (not museum/key/challenge):
+    - Dropdown to select 1.5 or 3 hours
+    - Updates the key length badge on signup embed
+    - Logs to audit channel
+  </Tab>
+  <Tab title="Delete">
+    Permanently deletes the raid:
+    - Removes the signup message
+    - Clears from active raids list
+    - Cannot be undone
+    - Logs to audit channel
+  </Tab>
+  <Tab title="Mark No-Show">
+    After closing a raid, mark users who didn't attend:
+    - Shows user selector with all participants
+    - Select 1-25 users at once
+    - Increments no-show count for each user
+    - Visible in `/stats user`
+    - Logs to audit channel
+  </Tab>
+  <Tab title="Find Sub">
+    For raids only (requires role structure):
+    - Select which role needs a substitute
+    - Bot finds users with experience in that role
+    - Prioritizes users available at raid time
+    - Shows top 5 candidates with:
+      - Role experience count
+      - Total raids participated
+      - Availability status (✅ if available)
+    - Sorted by best fit
+  </Tab>
+  <Tab title="Duplicate">
+    Clone this raid with a new time:
+    - Opens modal to enter new date/time
+    - For raids: option to copy roster or start empty
+    - For museum/key/challenge: always starts empty
+    - Creates new signup message
+    - Original raid remains unchanged
+  </Tab>
+</Tabs>
+
+## Auto-Close
+
+Raids can automatically close before start time if configured via [/settings](/commands/settings). Auto-close:
+- Closes signup at specified time before raid (e.g., 60 minutes)
+- Only applies to full raids
+- Sends closure notification to creator
+
+## Examples
+
+<CodeGroup>
+```text Close a Raid
+/raid raid_id:ABC123
+→ Click "Close"
+→ Raid is now closed, no new signups allowed
+```
+
+```text Change Raid Time
+/raid raid_id:ABC123
+→ Click "Change Time"
+→ Enter "tomorrow 8pm"
+→ Time updated, reminders reset
+```
+
+```text Mark No-Shows
+/raid raid_id:ABC123
+→ Click "Mark No-Show"
+→ Select users who didn't attend
+→ No-show counts incremented
+```
+
+```text Find Substitute
+/raid raid_id:ABC123
+→ Click "Find Sub"
+→ Select "Storm 1"
+→ Bot shows top 5 Storm players with availability
+```
+
+```text Duplicate Raid
+/raid raid_id:ABC123
+→ Click "Duplicate"
+→ Enter "next week same time"
+→ Choose "Copy Roster" or "Start Empty"
+→ New raid created with same settings
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/create](/commands/create) - Create new raids
+- [/raidsignup](/commands/raidsignup) - Manually manage signups
+- [/settings](/commands/settings) - Configure auto-close timing
+- [/stats](/commands/stats) - View no-show statistics

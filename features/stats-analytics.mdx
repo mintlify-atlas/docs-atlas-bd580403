@@ -1,0 +1,478 @@
+---
+title: 'Stats & Analytics'
+description: 'Track participation, attendance, and raid statistics for individuals and your entire server'
+---
+
+# Stats & Analytics
+
+RaidBot automatically tracks comprehensive participation data, giving you insights into individual performance, server-wide trends, and identifying inactive members.
+
+## User Statistics
+
+View detailed stats for any member with `/stats user`.
+
+```bash
+/stats user
+/stats user user:@Player
+```
+
+### Example Output
+
+```yaml
+PlayerName's Stats
+
+Total Raids: 42
+Attendance: 🌟 94.2%
+No-Shows: ✅ 0
+
+Favorite Role: Vanguard (18)
+Favorite Raid Type: Darkmoor (12)
+Most Active Day: Friday
+
+Timezone: EST
+Preferred Days: Mon-Fri 7-10pm
+Preferred Roles: Vanguard, Support
+Notes: Available for impromptu runs
+
+Last active: 2/28/2026
+```
+
+### Metrics Explained
+
+<ParamField path="Total Raids" type="number">
+  Count of all raids the user has signed up for (completed or not).
+</ParamField>
+
+<ParamField path="Attendance" type="percentage">
+  Percentage of raids where the user actually attended (not marked as no-show).
+  
+  **Indicators:**
+  - 🌟 90%+ (Excellent)
+  - ✅ 70-89% (Good)
+  - ⚠️ 50-69% (Fair)
+  - ❌ Below 50% (Poor)
+</ParamField>
+
+<ParamField path="No-Shows" type="number">
+  Times the user was marked as not attending after signing up.
+  
+  Displayed as: `✅ 0` or `⚠️ 3 (7.1%)` if non-zero
+</ParamField>
+
+<ParamField path="Favorite Role" type="string">
+  The role the user has played most often, with count in parentheses.
+</ParamField>
+
+<ParamField path="Favorite Raid Type" type="string">
+  The raid template/type the user participates in most, with count.
+</ParamField>
+
+<ParamField path="Most Active Day" type="string">
+  The day of the week the user raids most frequently.
+</ParamField>
+
+<Info>
+  Availability fields (timezone, preferred days/roles, notes) only appear if the user has set them via `/availability set`.
+</Info>
+
+### Permission Requirements
+
+- **Viewing your own stats**: Anyone can run `/stats user`
+- **Viewing others' stats**: Requires one of:
+  - Manage Server permission
+  - Admin role (configured via `/settings`)
+  - Special stats_others permission role
+  - Server owner
+
+## Server Statistics
+
+View overall participation across your entire server.
+
+```bash
+/stats server
+```
+
+### Example Output
+
+```yaml
+📊 Server Stats
+
+45 unique participants across 312 total raid signups
+
+Top Participants:
+1. @PlayerOne — 42 raids
+2. @PlayerTwo — 38 raids
+3. @PlayerThree — 35 raids
+4. @PlayerFour — 31 raids
+5. @PlayerFive — 28 raids
+```
+
+<Note>
+  "Total raid signups" counts every instance of a member signing up for a raid. If Player A joins 10 raids, that's 10 signups.
+</Note>
+
+## Weekly Reports
+
+Analyze participation over specific weeks.
+
+```bash
+/stats weekly
+/stats weekly weeks_back:1  # 1 week ago
+/stats weekly weeks_back:4  # 4 weeks ago
+```
+
+### Example Output
+
+```yaml
+📊 Weekly Report: Feb 24 - Mar 2, 2026
+
+Raids This Week: 18
+Active Users: 32
+Total Raids (All Time): 312
+
+Top Participants:
+1. @PlayerOne — 8 raids
+2. @PlayerTwo — 6 raids
+3. @PlayerThree — 5 raids
+4. @PlayerFour — 5 raids
+5. @PlayerFive — 4 raids
+
+Current week
+```
+
+### Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Track Trends" icon="chart-line">
+    Compare week-over-week participation to spot growth or decline.
+  </Card>
+  <Card title="Recognize Top Players" icon="trophy">
+    Highlight the most active raiders each week.
+  </Card>
+  <Card title="Plan Events" icon="calendar">
+    See which weeks had the most engagement.
+  </Card>
+  <Card title="Historical Data" icon="clock-rotate-left">
+    Review past weeks (up to 12 weeks back).
+  </Card>
+</CardGroup>
+
+## Monthly Reports
+
+Broader view of monthly participation with trend analysis.
+
+```bash
+/stats monthly
+/stats monthly months_back:1  # last month
+/stats monthly months_back:3  # 3 months ago
+```
+
+### Example Output
+
+```yaml
+📊 Monthly Report: February 2026
+
+Raids This Month: 67
+Active Users: 48
+Total Raids (All Time): 312
+
+Trend: 📈 +15.2% vs last month
+
+Current month
+```
+
+### Trend Indicators
+
+- 📈 **Positive growth**: More raids than previous month
+- 📉 **Decline**: Fewer raids than previous month
+- ➖ **No data**: First month or no previous data available
+
+<Tip>
+  Use monthly reports to identify seasonal patterns in your guild's activity.
+</Tip>
+
+## Inactive Members Report
+
+Find members who haven't participated recently (or ever).
+
+```bash
+/stats inactive
+/stats inactive weeks:2
+/stats inactive weeks:4 role:@Raiders
+/stats inactive weeks:0  # never participated
+/stats inactive refresh:True
+```
+
+### Parameters
+
+<ParamField path="weeks" type="number" default="0">
+  Show members inactive for at least this many weeks.
+  
+  - `0`: Never participated (default)
+  - `2`: No raids in last 2 weeks
+  - `4`: No raids in last 4 weeks
+</ParamField>
+
+<ParamField path="role" type="role" optional>
+  Limit results to members with a specific role.
+  
+  Example: Only check `@Raiders` for inactivity.
+</ParamField>
+
+<ParamField path="refresh" type="boolean" default="false">
+  Force refresh the member list from Discord (slower but more accurate).
+  
+  Use when:
+  - You suspect the cached member list is outdated
+  - Recently added/removed many members
+  - First run in a large server
+</ParamField>
+
+### Example Output
+
+```yaml
+Inactive Members
+
+Members with role "Raiders" inactive for 2+ weeks (7):
+
+• @InactiveMember1 (last: 2/15/2026)
+• @InactiveMember2 (last: 2/10/2026)
+• @InactiveMember3 (last: 2/08/2026)
+• @InactiveMember4 (last: 1/30/2026)
+• @InactiveMember5 (last: 1/28/2026)
+• @InactiveMember6 (never)
+• @InactiveMember7 (never)
+
+(Fetched fresh member list from Discord.)
+```
+
+<Warning>
+  In very large servers (1000+ members), `/stats inactive refresh:True` may timeout. Use it sparingly or limit by role.
+</Warning>
+
+### Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Guild Cleanup" icon="broom">
+    Identify members to remove during roster trimming.
+  </Card>
+  <Card title="Re-engagement" icon="bullhorn">
+    Find inactive members to reach out to.
+  </Card>
+  <Card title="Role Management" icon="user-tag">
+    Remove raid roles from inactive players.
+  </Card>
+  <Card title="Audit Compliance" icon="clipboard-check">
+    Track participation requirements for guild rules.
+  </Card>
+</CardGroup>
+
+## Data Export
+
+Export all participation data as CSV for external analysis.
+
+```bash
+/stats export
+```
+
+Generates a file:
+```
+stats_1234567890_1735689600.csv
+```
+
+### CSV Format
+
+```csv
+User ID,Username,Total Raids,Attendance Rate,No-Shows,Favorite Role,Favorite Type,Last Active
+123456789,PlayerOne,42,0.942,0,Vanguard,Darkmoor,1709251200
+234567890,PlayerTwo,38,0.921,3,Support,Darkmoor,1709164800
+345678901,PlayerThree,35,0.971,1,Gates,Museum,1709078400
+```
+
+### Analysis Ideas
+
+- Import into Google Sheets/Excel for custom charts
+- Track long-term trends over multiple exports
+- Build custom leaderboards
+- Cross-reference with guild management tools
+- Create participation requirement dashboards
+
+## No-Show Tracking
+
+Record when members sign up but don't attend raids.
+
+### How to Mark No-Shows
+
+<Steps>
+  <Step title="Close the raid">
+    After the raid completes, open the management panel:
+    ```bash
+    /raid raid_id:abc123
+    ```
+    Click "Close" to lock the signup.
+  </Step>
+  
+  <Step title="Mark no-shows">
+    Click "Mark No-Show" button (only appears when closed).
+  </Step>
+  
+  <Step title="Select users">
+    Choose users who didn't attend from the dropdown (supports multi-select up to 25).
+  </Step>
+  
+  <Step title="Confirm">
+    The bot records each no-show and updates user statistics immediately.
+  </Step>
+</Steps>
+
+### Impact on Stats
+
+No-shows affect:
+
+1. **Attendance Rate**: Decreases the user's overall attendance percentage
+2. **No-Show Count**: Increments the total no-show counter
+3. **User Stats Embed**: Shows `⚠️ 3 (7.1%)` if above 0
+
+<Info>
+  No-show data is permanent and cannot be easily reversed. Mark carefully and consistently.
+</Info>
+
+### Best Practices
+
+<Tip>
+  **Be consistent** — Only mark no-shows if you're going to do it for all raids, otherwise data becomes unreliable.
+</Tip>
+
+<Tip>
+  **Define your policy** — Clarify when a no-show is recorded (late arrivals? early leaves? emergencies?).
+</Tip>
+
+<Tip>
+  **Communicate first** — Consider reaching out to frequent no-shows before punitive action.
+</Tip>
+
+## Participation Counting
+
+### What Counts as a Raid?
+
+The following actions count toward a user's total raids:
+
+<Check>✓ Signing up via reaction</Check>
+<Check>✓ Being manually assigned via `/raidsignup action:assign`</Check>
+<Check>✓ Being promoted from waitlist</Check>
+<Check>✓ Roster copying from recurring raids</Check>
+
+### What Doesn't Count?
+
+<Warning>Joining the waitlist alone (not promoted)</Warning>
+<Warning>Reacting but being full (auto-waitlisted and not promoted)</Warning>
+<Warning>Being removed before raid closes</Warning>
+
+### Special Cases
+
+**Museum Signups**: Count as raid type "Museum"
+
+**Team Events** (Challenge/Key): Counted, but no role breakdown (no "Favorite Role" for these)
+
+**Recurring Raid Roster Copies**: Count as new signups when the new instance spawns
+
+**Practice/Non-Participation Events**: You can create custom templates with `countsForParticipation: false` to exclude from stats
+
+## Data Retention
+
+Participation data is stored indefinitely:
+
+- User totals and breakdowns
+- Role preferences
+- Raid type preferences
+- Weekday patterns
+- Last active timestamps
+- No-show records
+
+Data persists even if:
+- Raid messages are deleted
+- Users leave and rejoin the server
+- Bot is temporarily offline
+
+<Note>
+  Admins can manually clear specific user data if needed (contact bot developer for instructions).
+</Note>
+
+## Privacy & Permissions
+
+### Who Can View What?
+
+| Command | Permission Required |
+|---------|--------------------|
+| `/stats user` (self) | Anyone |
+| `/stats user user:@Other` | Manage Server or admin role |
+| `/stats server` | Anyone in server |
+| `/stats weekly` | Anyone in server |
+| `/stats monthly` | Anyone in server |
+| `/stats inactive` | Manage Server or admin role |
+| `/stats export` | Manage Server or admin role |
+
+<Info>
+  Server-wide stats (server, weekly, monthly) don't reveal individual member data — only aggregates and leaderboards.
+</Info>
+
+## Integration with Other Features
+
+### Find Sub
+
+The Find Sub feature (in raid management panel) uses participation stats:
+
+```yaml
+Ranking Factors:
+1. Role experience (times played this specific role)
+2. Total participation (overall raid count)
+3. Recency (active in last 2 weeks)
+4. Availability (if set and matches raid time)
+```
+
+### Availability Data
+
+If a user has set `/availability`, it appears in their stats:
+
+```yaml
+PlayerName's Stats
+...
+Timezone: EST
+Preferred Days: Mon-Fri 7-10pm
+Preferred Roles: Vanguard, Support
+```
+
+### Leaderboards
+
+Several commands show top participants:
+- `/stats server` → Top 5 all-time
+- `/stats weekly` → Top 5 this week
+- `/leaderboard` → (if implemented) Advanced rankings
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="My stats show 0 raids but I've participated">
+    Stats only count signups that were active when the raid was created or updated. If you joined very early raids before stats were implemented, they won't appear.
+  </Accordion>
+  
+  <Accordion title="Attendance rate seems wrong">
+    Attendance is calculated as: `(Total Raids - No-Shows) / Total Raids`
+    
+    If no-shows were marked inconsistently, the rate may not reflect reality. Request admin to review your no-show records.
+  </Accordion>
+  
+  <Accordion title="Can't view another member's stats">
+    You need Manage Server permission, an admin role, or the stats_others permission role. Contact your server admins.
+  </Accordion>
+  
+  <Accordion title="Export CSV is empty">
+    This means no participation data has been recorded yet. Stats populate as raids are created and closed.
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+- [Raid Management](/features/raid-management) - No-show marking happens here
+- [Availability Tracking](/features/availability-tracking) - Integrates with user stats
+- [Recurring Raids](/features/recurring-raids) - Roster copying affects participation counts

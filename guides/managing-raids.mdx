@@ -1,0 +1,426 @@
+---
+title: Managing Raids
+description: Use the interactive raid management panel to modify, close, reopen, and manage your raid signups
+---
+
+Once a raid is created, you can manage it using the `/raid` command with the raid's unique ID. This opens an interactive management panel with powerful controls.
+
+## Accessing the Management Panel
+
+<Steps>
+  <Step title="Find the Raid ID">
+    Every raid has a unique ID shown at the bottom of the signup embed:
+
+    ```
+    Raid ID: `ABC123`
+    Created by @YourName
+    ```
+
+    Copy this ID to use in management commands.
+  </Step>
+
+  <Step title="Open the panel">
+    Run the `/raid` command with the Raid ID:
+
+    ```bash
+    /raid raid_id:ABC123
+    ```
+
+    This opens an ephemeral (private) management panel visible only to you.
+  </Step>
+
+  <Step title="Use the controls">
+    The panel shows:
+    - Current raid status (Open/Closed)
+    - Raid type and name
+    - Jump link to the signup message
+    - Action buttons for management tasks
+  </Step>
+</Steps>
+
+<Note>
+  The `/raid` command requires the **Manage Server** permission.
+</Note>
+
+## Management Actions
+
+### Close Signup
+
+Closing a raid:
+- Removes all reaction emojis
+- Adds "Signups Closed" to the description
+- Adds a status field showing who closed it and when
+- Records participation statistics for all signed-up players
+- Archives the discussion thread (if enabled)
+- Prevents new signups
+
+<Tabs>
+  <Tab title="Via Panel">
+    Click the **Close** button in the management panel.
+
+    The button is disabled if the raid is already closed.
+  </Tab>
+
+  <Tab title="Automatic Closure">
+    Raids automatically close when their scheduled time passes (configurable auto-close window).
+
+    Auto-closed raids show:
+    ```
+    Closed automatically on [timestamp]
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Closing a raid records participation stats. Reopening and closing again will use **delta tracking** to only update stats for players who were added or removed between the two closures.
+</Warning>
+
+### Reopen Signup
+
+Reopening a raid:
+- Restores all reaction emojis
+- Removes "Signups Closed" from the description
+- Updates the status field to show who reopened it
+- Allows new signups again
+- Resets reminder flags
+
+<Steps>
+  <Step title="Click the Reopen button">
+    In the management panel, click **Reopen**.
+
+    This button is only enabled when the raid is closed.
+  </Step>
+
+  <Step title="Reactions restored">
+    The bot automatically re-adds all necessary reaction emojis based on the raid type:
+    - Regular raids: Role emojis (⚔️, 🛡️, etc.)
+    - Museum: ✅
+    - Key/Challenge: Team numbers (1️⃣, 2️⃣, 3️⃣, 4️⃣)
+  </Step>
+</Steps>
+
+### Delete Raid
+
+Deleting a raid:
+- Permanently removes the signup message
+- Removes the raid from the active raids list
+- Cannot be undone
+
+<Warning>
+  Deletion is permanent! Make sure you want to delete before clicking.
+</Warning>
+
+```bash
+Click "Delete" → Raid message deleted → Raid data removed
+```
+
+### Change Time
+
+Update the raid's scheduled time:
+
+<Steps>
+  <Step title="Click Change Time">
+    In the management panel, click **Change Time**.
+  </Step>
+
+  <Step title="Enter new time">
+    A modal appears asking for the new date/time. Use the same natural language formats as creation:
+
+    - `tomorrow 8pm`
+    - `friday 7pm EST`
+    - `2026-03-20 19:00`
+    - Unix timestamp
+  </Step>
+
+  <Step title="Time updated">
+    The raid embed is updated with the new time. The bot also:
+    - Resets creator and participant reminder flags
+    - Updates the embed timestamp
+    - Logs the change to the audit channel
+  </Step>
+</Steps>
+
+<Info>
+  Changing the time uses the same **chrono-node** parser as raid creation, respecting your server's configured timezone.
+</Info>
+
+### Change Length
+
+For regular raids (not museum, key, or challenge), you can change the raid length:
+
+<Steps>
+  <Step title="Click Change Length">
+    In the management panel, click **Change Length**.
+
+    <Note>
+      This button is disabled for museum, key boss, and challenge mode signups.
+    </Note>
+  </Step>
+
+  <Step title="Select new length">
+    Choose between:
+    - **1.5 hours**
+    - **3 hours**
+  </Step>
+
+  <Step title="Length updated">
+    The raid embed updates to show the new length badge:
+    ```
+    `3 HOUR KEY`
+    ```
+  </Step>
+</Steps>
+
+### Mark No-Show
+
+After a raid is closed, you can mark players who didn't show up:
+
+<Steps>
+  <Step title="Click Mark No-Show">
+    In the management panel (with a closed raid), click **Mark No-Show** (❌).
+
+    <Note>
+      This button is only enabled when the raid is closed.
+    </Note>
+  </Step>
+
+  <Step title="Select users">
+    A user select menu appears. Choose one or more users who were signed up but didn't attend.
+
+    You can select up to 25 users at once.
+  </Step>
+
+  <Step title="No-show recorded">
+    The bot:
+    - Increments the no-show count for each user
+    - Shows a confirmation message
+    - Logs the action to the audit channel
+
+    No-show tracking is permanent and can be used for guild management decisions.
+  </Step>
+</Steps>
+
+<Warning>
+  Only mark users as no-shows if they confirmed attendance but didn't show up. Don't mark users who properly removed their signup or gave notice.
+</Warning>
+
+### Find Substitute
+
+For regular raids with role-based signups, you can find substitute candidates:
+
+<Steps>
+  <Step title="Click Find Sub">
+    In the management panel, click **Find Sub** (🔍).
+
+    <Note>
+      This feature is only available for regular raids with roles, not museum or team-based signups.
+    </Note>
+  </Step>
+
+  <Step title="Select the role">
+    Choose which role you need a substitute for from the dropdown menu.
+
+    The menu shows all roles in the raid (Hitter, Jade, Support, etc.).
+  </Step>
+
+  <Step title="View recommendations">
+    The bot analyzes participation data and shows the top 5 candidates based on:
+    - **Role experience**: Number of times they've played this role
+    - **Total raids**: Overall raid participation
+    - **Availability**: If they marked themselves available at the raid time (✅)
+    - **Recency**: Activity in the last 2 weeks
+
+    Example output:
+    ```
+    🔍 Substitute Candidates for Storm Hitter
+
+    1. @PlayerOne — 15x Storm Hitter, 43 total raids ✅ available
+    2. @PlayerTwo — 12x Storm Hitter, 38 total raids
+    3. @PlayerThree — 8x Storm Hitter, 25 total raids ✅ available
+    ```
+  </Step>
+
+  <Step title="Contact candidates">
+    Reach out to the top candidates to see if they can fill in!
+  </Step>
+</Steps>
+
+<Tip>
+  The substitute finder prioritizes players who have marked themselves as available for that specific time using the `/available` command.
+</Tip>
+
+### Duplicate Raid
+
+Create a copy of an existing raid with a new time:
+
+<Steps>
+  <Step title="Click Duplicate">
+    In the management panel, click **Duplicate** (📋).
+  </Step>
+
+  <Step title="Enter new time">
+    A modal appears asking for the date/time of the duplicate raid.
+
+    Use natural language or Unix timestamps:
+    - `next friday 7pm`
+    - `two weeks from now at 8pm`
+  </Step>
+
+  <Step title="Choose roster option" if="Regular Raid">
+    For regular raids, you'll be asked:
+
+    **Copy Roster** - Duplicates the current signups (preserves who signed up)
+
+    **Start Empty** - Creates empty slots (fresh signup)
+
+    <Info>
+      Museum, key boss, and challenge mode raids always start empty.
+    </Info>
+  </Step>
+
+  <Step title="Duplicate created">
+    A new raid is created with:
+    - Same type and configuration
+    - New Raid ID
+    - New timestamp
+    - Same length/strategy (if applicable)
+    - Copied or empty roster based on your choice
+    - Fresh reactions added
+    - New discussion thread (if enabled)
+  </Step>
+</Steps>
+
+<CodeGroup>
+```text Use Case: Weekly Raid
+You run a weekly Dragonspyre raid every Saturday at 7pm.
+
+1. After this week's raid closes
+2. Click "Duplicate"
+3. Enter "next saturday 7pm"
+4. Choose "Start Empty"
+5. New signup posted for next week!
+```
+
+```text Use Case: Repeat with Same Team
+You want to run the same raid again with the same team.
+
+1. Click "Duplicate"
+2. Enter "tomorrow 6pm"
+3. Choose "Copy Roster"
+4. Same team pre-filled!
+```
+</CodeGroup>
+
+## Audit Logging
+
+All management actions are logged to the audit channel (if configured):
+
+<Tabs>
+  <Tab title="Raid Closed">
+    ```
+    Raid Closed
+    By: @Manager
+    Raid ID: ABC123
+    Message: [Jump Link]
+    ```
+  </Tab>
+
+  <Tab title="Raid Reopened">
+    ```
+    Raid Reopened
+    By: @Manager
+    Raid ID: ABC123
+    Message: [Jump Link]
+    ```
+  </Tab>
+
+  <Tab title="Time Changed">
+    ```
+    Raid Time Updated
+    By: @Manager
+    Raid ID: ABC123
+    New time: Friday, March 15, 2026 7:00 PM
+    View panel: [Jump Link]
+    ```
+  </Tab>
+
+  <Tab title="Length Changed">
+    ```
+    Raid Length Updated
+    By: @Manager
+    Raid ID: ABC123
+    New length: 3 hours
+    View signup: [Jump Link]
+    ```
+  </Tab>
+
+  <Tab title="No-Shows Marked">
+    ```
+    No-Shows Marked
+    By: @Manager
+    Raid ID: ABC123
+    Users: @Player1, @Player2, @Player3
+    ```
+  </Tab>
+
+  <Tab title="Raid Duplicated">
+    ```
+    Raid Duplicated
+    By: @Manager
+    Source: ABC123
+    New Raid ID: XYZ789
+    Roster: Copied
+    Source raid: [Jump Link]
+    New raid: [Jump Link]
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Close raids promptly after completion">
+    Close raids soon after they finish to:
+    - Record accurate participation stats
+    - Clear the active raids list
+    - Archive discussion threads
+    - Update bot presence
+
+    If you forget, the bot will auto-close based on configured settings.
+  </Accordion>
+
+  <Accordion title="Use Find Sub before canceling">
+    If someone drops out last minute:
+    1. Try Find Sub to identify replacements
+    2. Contact top candidates
+    3. Only cancel if no substitutes available
+  </Accordion>
+
+  <Accordion title="Mark no-shows accurately">
+    Only mark no-shows for players who:
+    - Confirmed they would attend
+    - Didn't show up without notice
+    - Didn't remove their signup
+
+    This data helps guild leaders identify reliability issues.
+  </Accordion>
+
+  <Accordion title="Duplicate for recurring events">
+    For weekly or recurring raids:
+    - Run the raid
+    - Close it to record stats
+    - Duplicate for next week with empty roster
+    - Keeps the same configuration without manual setup
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Time Parsing" icon="clock" href="/guides/time-parsing">
+    Learn about natural language time parsing
+  </Card>
+  <Card title="Polls" icon="chart-bar" href="/guides/polls">
+    Use polls to find optimal raid times
+  </Card>
+</CardGroup>

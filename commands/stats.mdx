@@ -1,0 +1,274 @@
+---
+title: /stats
+description: View raid participation statistics and analytics
+---
+
+The `/stats` command provides comprehensive participation analytics at the user and server level, including raid counts, attendance rates, no-show tracking, and activity reports.
+
+## Command Signature
+
+```
+/stats <user|server|weekly|monthly|inactive|export> [...options]
+```
+
+## Subcommands
+
+<Tabs>
+  <Tab title="User Stats">
+    View individual user statistics.
+    
+    ```
+    /stats user [user:@PlayerName]
+    ```
+    
+    <ParamField path="user" type="user">
+      User to view stats for (defaults to yourself). Viewing others requires admin permission.
+    </ParamField>
+    
+    **Output includes:**
+    - Total raids participated
+    - Attendance rate (percentage of raids attended after signing up)
+    - No-show count and percentage
+    - Favorite role (most played)
+    - Favorite raid type
+    - Most active day of week
+    - Availability settings (if configured)
+    - Last raid date
+    
+    **Example:**
+    ```
+    PlayerName's Stats
+    
+    Total Raids: 47
+    Attendance: 🌟 95.7%
+    No-Shows: ✅ 0
+    
+    Favorite Role: Storm 1 (12)
+    Favorite Raid Type: Dragonspyre (18)
+    Most Active Day: Saturday
+    
+    Last active: March 1, 2024
+    ```
+  </Tab>
+  <Tab title="Server Stats">
+    View server-wide participation overview.
+    
+    ```
+    /stats server
+    ```
+    
+    **Output includes:**
+    - Total unique participants
+    - Total raid signups (all-time)
+    - Top 5 participants by raid count
+    
+    **Example:**
+    ```
+    📊 Server Stats
+    
+    42 unique participants across 387 total raid signups
+    
+    Top Participants:
+    1. @Player1 — 47 raids
+    2. @Player2 — 41 raids
+    3. @Player3 — 38 raids
+    4. @Player4 — 35 raids
+    5. @Player5 — 32 raids
+    ```
+  </Tab>
+  <Tab title="Weekly Report">
+    View weekly participation summary with trends.
+    
+    ```
+    /stats weekly [weeks_back:0-12]
+    ```
+    
+    <ParamField path="weeks_back" type="integer">
+      How many weeks back to view (0 = current week, max 12)
+    </ParamField>
+    
+    **Output includes:**
+    - Week date range
+    - Total raids this week
+    - Active users this week
+    - Total raids all-time
+    - Top participants for the week
+    
+    **Example:**
+    ```
+    📊 Weekly Report: Feb 26 - Mar 3
+    
+    Raids This Week: 12
+    Active Users: 18
+    Total Raids (All Time): 387
+    
+    Top Participants:
+    1. @Player1 — 5 raids
+    2. @Player2 — 4 raids
+    3. @Player3 — 3 raids
+    ```
+  </Tab>
+  <Tab title="Monthly Report">
+    View monthly participation summary with trends.
+    
+    ```
+    /stats monthly [months_back:0-12]
+    ```
+    
+    <ParamField path="months_back" type="integer">
+      How many months back to view (0 = current month, max 12)
+    </ParamField>
+    
+    **Output includes:**
+    - Month name
+    - Total raids this month
+    - Active users this month
+    - Total raids all-time
+    - Trend vs. previous month (percentage change)
+    
+    **Example:**
+    ```
+    📊 Monthly Report: March 2024
+    
+    Raids This Month: 48
+    Active Users: 35
+    Total Raids (All Time): 387
+    
+    Trend: 📈 +12.5% vs last month
+    ```
+  </Tab>
+  <Tab title="Inactive Members">
+    List members with no recent raid participation.
+    
+    ```
+    /stats inactive [weeks:0-52] [role:@RoleName] [refresh:true]
+    ```
+    
+    <ParamField path="weeks" type="integer">
+      Show members inactive for at least X weeks. 0 = never participated (default).
+    </ParamField>
+    
+    <ParamField path="role" type="role">
+      Optional: limit to members with this role
+    </ParamField>
+    
+    <ParamField path="refresh" type="boolean">
+      Force refresh member list from Discord (slower but more accurate)
+    </ParamField>
+    
+    **Output includes:**
+    - List of inactive members
+    - Last raid date for each (or "never" if none)
+    - Total count
+    - Filtered by role if specified
+    
+    **Example:**
+    ```
+    Inactive Members
+    
+    Members with role "Raider" inactive for 4+ weeks (8):
+    • @Player1 (last: Feb 1, 2024)
+    • @Player2 (last: Jan 28, 2024)
+    • @Player3 (never)
+    ...
+    ```
+    
+    <Note>
+    Waitlist signups count as activity for inactive tracking.
+    </Note>
+  </Tab>
+  <Tab title="Export">
+    Download all participation data as CSV.
+    
+    ```
+    /stats export
+    ```
+    
+    **File includes:**
+    - User ID and username
+    - Total raids
+    - Role counts (per-role breakdown)
+    - Template counts (per-raid-type breakdown)
+    - Weekday activity (per-day breakdown)
+    - Last raid date
+    
+    **Usage:**
+    1. Run the command
+    2. Download the CSV file
+    3. Open in Excel, Google Sheets, etc.
+    4. Analyze participation trends
+  </Tab>
+</Tabs>
+
+## Attendance Rate
+
+Attendance rate is calculated as:
+```
+(Total Raids - No-Shows) / Total Raids × 100%
+```
+
+**Visual indicators:**
+- 🌟 90%+ - Excellent attendance
+- ✅ 70-89% - Good attendance
+- ⚠️ 50-69% - Fair attendance
+- ❌ Below 50% - Poor attendance
+
+## No-Show Tracking
+
+No-shows are tracked when admins mark users via the [/raid](/commands/raid) panel after closing a raid.
+
+**Displayed as:**
+- `✅ 0` - No no-shows
+- `⚠️ 2 (4.3%)` - 2 no-shows out of 47 raids (4.3% rate)
+
+<Note>
+No-show rate above 20% triggers a warning indicator.
+</Note>
+
+## Permissions
+
+- **user** (viewing self) - Available to all users
+- **user** (viewing others) - Requires admin or `stats_others` permission
+- **server** - Requires admin
+- **weekly** - Requires admin
+- **monthly** - Requires admin
+- **inactive** - Requires admin
+- **export** - Requires admin
+
+## Examples
+
+<CodeGroup>
+```text View Your Own Stats
+/stats user
+```
+
+```text View Another User's Stats (Admin)
+/stats user user:@PlayerName
+```
+
+```text Server Overview
+/stats server
+```
+
+```text This Week's Activity
+/stats weekly
+```
+
+```text Last Month's Activity
+/stats monthly months_back:1
+```
+
+```text Find Inactive Raiders (4+ Weeks)
+/stats inactive weeks:4 role:@Raider
+```
+
+```text Export All Data
+/stats export
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/raid](/commands/raid) - Mark no-shows after raids
+- [/raidinfo](/commands/raidinfo) - View raid history
+- [/availability](/commands/availability) - Set availability (shown in user stats)

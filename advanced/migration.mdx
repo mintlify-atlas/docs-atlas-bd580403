@@ -1,0 +1,560 @@
+---
+title: JSON to SQLite Migration
+description: Migrate existing RaidBot data from JSON files to the SQLite database system
+---
+
+## Overview
+
+RaidBot originally stored data in JSON files but now uses SQLite for better performance, reliability, and data integrity. This migration script automatically imports your existing data.
+
+<Warning>
+Always create backups before running migrations. The script automatically renames JSON files to `.json.migrated` after successful migration.
+</Warning>
+
+## Migration Script
+
+The migration script is located at `db/migrate.js` and handles the complete data transition.
+
+### Running the Migration
+
+```bash
+node db/migrate.js
+```
+
+### What Gets Migrated
+
+The script migrates data from 11 JSON files to SQLite tables:
+
+<CardGroup cols={2}>
+  <Card title="Guild Configs" icon="server">
+    `raid_channels.json`, `museum_channels.json`, `audit_channels.json`, `guild_settings.json` → `guilds` table
+  </Card>
+  <Card title="Active Raids" icon="calendar">
+    `active_raids.json` → `raids` and `signups` tables
+  </Card>
+  <Card title="Statistics" icon="chart-line">
+    `raid_stats.json` → `user_stats` and `guild_user_stats` tables
+  </Card>
+  <Card title="Permissions" icon="shield">
+    `admin_roles.json`, `command_permissions.json`, `signup_roles.json` → permission tables
+  </Card>
+  <Card title="Availability" icon="clock">
+    `availability.json` → `availability` table
+  </Card>
+  <Card title="Templates" icon="paintbrush">
+    `template_overrides.json` → `template_overrides` and `custom_templates` tables
+  </Card>
+</CardGroup>
+
+## Migration Process
+
+### Step 1: Schema Initialization
+
+The script first initializes the SQLite schema:
+
+```javascript
+const { db, initializeSchema, DATA_DIR } = require('./database');
+
+initializeSchema();
+```
+
+This creates all tables, indexes, and applies any pending migrations.
+
+### Step 2: Guild Configuration
+
+Merges data from multiple JSON files into the `guilds` table:
+
+```javascript
+function migrateGuilds() {
+    console.log('Migrating guild configurations...');
+
+    const insertGuild = db.prepare(`
+        INSERT OR REPLACE INTO guilds (
+            id, raid_channel_id, museum_channel_id, audit_channel_id,
+            creator_reminder_seconds, participant_reminder_seconds,
+            auto_close_seconds, last_auto_close_seconds,
+            creator_reminders_enabled, participant_reminders_enabled,
+            raid_leader_role_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const raidChannels = readJsonFile(FILES.raidChannels) || {};
+    const museumChannels = readJsonFile(FILES.museumChannels) || {};
+    const auditChannels = readJsonFile(FILES.auditChannels) || {};
+    const guildSettings = readJsonFile(FILES.guildSettings) || {};
+
+    // Collect all guild IDs from all sources
+    const guildIds = new Set([
+        ...Object.keys(raidChannels),
+        ...Object.keys(museumChannels),
+        ...Object.keys(auditChannels),
+        ...Object.keys(guildSettings)
+    ]);
+
+    for (const guildId of guildIds) {
+        const settings = guildSettings[guildId] || {};
+        insertGuild.run(
+            guildId,
+            raidChannels[guildId] || null,
+            museumChannels[guildId] || null,
+            auditChannels[guildId] || null,
+            settings.creatorReminderSeconds ?? 1800,
+            settings.participantReminderSeconds ?? 600,
+            settings.autoCloseSeconds ?? 3600,
+            settings.lastAutoCloseSeconds ?? 3600,
+            settings.creatorRemindersEnabled !== false ? 1 : 0,
+            settings.participantRemindersEnabled !== false ? 1 : 0,
+            settings.raidLeaderRoleId || null
+        );
+    }
+}
+```
+
+### Step 3: Active Raids & Signups
+
+Migrates raid posts and all associated signups:
+
+```javascript
+function migrateActiveRaids() {
+    const insertRaid = db.prepare(`
+        INSERT OR REPLACE INTO raids (
+            message_id, raid_id, guild_id, channel_id, type,
+            template_slug, template_data, datetime, timestamp,
+            length, strategy, creator_id, max_slots,
+            creator_reminder_sent, participant_reminder_sent
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertSignup = db.prepare(`
+        INSERT OR REPLACE INTO signups (
+            message_id, user_id, role_name, role_emoji, role_icon,
+            group_name, slot_index, slots, is_waitlist, side_assignment
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const activeRaids = readJsonFile(FILES.activeRaids) || {};
+
+    for (const [messageId, raid] of Object.entries(activeRaids)) {
+        // Insert raid
+        insertRaid.run(
+            messageId,
+            raid.raidId,
+            raid.guildId,
+            raid.channelId,
+            raid.type || 'raid',
+            raid.template?.slug || null,
+            raid.template ? JSON.stringify(raid.template) : null,
+            raid.datetime || null,
+            raid.timestamp || null,
+            raid.length || null,
+            raid.strategy || null,
+            raid.creatorId,
+            raid.maxSlots || null,
+            raid.creatorReminderSent ? 1 : 0,
+            raid.participantReminderSent ? 1 : 0
+        );
+
+        // Insert signups (normalized from nested structure)
+        if (raid.type === 'museum') {
+            // Museum signups are simple arrays
+            raid.signups.forEach((userId, index) => {
+                insertSignup.run(
+                    messageId, userId, 'Museum', '✅', null,
+                    null, index, 1, 0, null
+                );
+            });
+        } else {
+            // Regular raid signups with roles
+            raid.signups.forEach((role) => {
+                role.users.forEach((userId, userIndex) => {
+                    insertSignup.run(
+                        messageId, userId, role.name, role.emoji, role.icon,
+                        role.groupName, userIndex, role.slots || 1, 0,
+                        role.sideAssignments?.[userId] || null
+                    );
+                });
+                // Waitlist entries
+                role.waitlist?.forEach((userId, waitIndex) => {
+                    insertSignup.run(
+                        messageId, userId, role.name, role.emoji, role.icon,
+                        role.groupName, waitIndex, role.slots || 1, 1, null
+                    );
+                });
+            });
+        }
+    }
+}
+```
+
+<Note>
+The migration normalizes nested signup structures into flat database rows with foreign keys.
+</Note>
+
+### Step 4: User Statistics
+
+Migrates both global and per-guild statistics:
+
+```javascript
+function migrateRaidStats() {
+    const statsData = readJsonFile(FILES.raidStats) || {};
+    const globalStats = statsData.global || statsData;
+    const guildStats = statsData.guild || {};
+
+    // Global stats
+    for (const [userId, stats] of Object.entries(globalStats)) {
+        insertUserStats.run(
+            userId,
+            stats.totalRaids || 0,
+            JSON.stringify(stats.roleCounts || {}),
+            JSON.stringify(stats.templateCounts || {}),
+            JSON.stringify(stats.weekdayCounts || {}),
+            stats.lastUpdated || null,
+            stats.lastRaidAt || null
+        );
+    }
+
+    // Guild-specific stats
+    for (const [guildId, users] of Object.entries(guildStats)) {
+        for (const [userId, stats] of Object.entries(users)) {
+            insertGuildUserStats.run(
+                guildId, userId,
+                stats.totalRaids || 0,
+                JSON.stringify(stats.roleCounts || {}),
+                JSON.stringify(stats.templateCounts || {}),
+                JSON.stringify(stats.weekdayCounts || {}),
+                stats.lastUpdated || null,
+                stats.lastRaidAt || null
+            );
+        }
+    }
+}
+```
+
+### Step 5: Permissions
+
+Migrates admin roles, command permissions, and signup requirements:
+
+```javascript
+function migratePermissions() {
+    // Admin roles: Map<guildId, roleId[]>
+    const adminRoles = readJsonFile(FILES.adminRoles) || {};
+    for (const [guildId, roles] of Object.entries(adminRoles)) {
+        for (const roleId of roles) {
+            insertAdminRole.run(guildId, roleId);
+        }
+    }
+
+    // Command permissions: Map<guildId, Map<commandName, roleId[]>>
+    const commandPerms = readJsonFile(FILES.commandPermissions) || {};
+    for (const [guildId, commands] of Object.entries(commandPerms)) {
+        for (const [cmdName, roles] of Object.entries(commands)) {
+            for (const roleId of roles) {
+                insertCommandPerm.run(guildId, cmdName, roleId);
+            }
+        }
+    }
+
+    // Signup roles: Map<guildId, roleId[]>
+    const signupRoles = readJsonFile(FILES.signupRoles) || {};
+    for (const [guildId, roles] of Object.entries(signupRoles)) {
+        for (const roleId of roles) {
+            insertSignupRole.run(guildId, roleId);
+        }
+    }
+}
+```
+
+### Step 6: Availability
+
+Migrates user availability schedules:
+
+```javascript
+function migrateAvailability() {
+    const availability = readJsonFile(FILES.availability) || {};
+
+    for (const [guildId, users] of Object.entries(availability)) {
+        for (const [userId, data] of Object.entries(users)) {
+            // Handle legacy string format (just notes)
+            const avail = typeof data === 'string'
+                ? { notes: data }
+                : (data || {});
+            
+            insertAvail.run(
+                guildId, userId,
+                avail.timezone || null,
+                avail.days || null,
+                avail.roles || null,
+                avail.notes || null,
+                avail.windows ? JSON.stringify(avail.windows) : null
+            );
+        }
+    }
+}
+```
+
+### Step 7: Templates
+
+Migrates template overrides and custom templates:
+
+```javascript
+function migrateTemplates() {
+    const templateData = readJsonFile(FILES.templateOverrides) || {};
+    const overrides = templateData.overrides || templateData;
+    const custom = templateData.custom || {};
+
+    // Template overrides
+    for (const [guildId, templates] of Object.entries(overrides)) {
+        for (const [templateId, data] of Object.entries(templates)) {
+            insertOverride.run(
+                guildId, templateId,
+                data.name || null,
+                data.emoji || null,
+                data.description || null,
+                data.color || null,
+                data.disabled ? 1 : 0
+            );
+        }
+    }
+
+    // Custom templates
+    for (const [guildId, templates] of Object.entries(custom)) {
+        for (const [templateId, data] of Object.entries(templates)) {
+            insertCustom.run(
+                templateId, guildId,
+                data.name || 'Custom Raid',
+                data.emoji || null,
+                data.description || null,
+                data.color || null,
+                data.roleGroups ? JSON.stringify(data.roleGroups) : null
+            );
+        }
+    }
+}
+```
+
+### Step 8: Backup Original Files
+
+After successful migration, JSON files are renamed:
+
+```javascript
+function backupJsonFiles() {
+    for (const [name, filePath] of Object.entries(FILES)) {
+        if (fs.existsSync(filePath)) {
+            const backupPath = `${filePath}.migrated`;
+            fs.renameSync(filePath, backupPath);
+            console.log(`  Backed up ${name}`);
+        }
+    }
+}
+```
+
+## Transaction Safety
+
+All migrations run inside a single transaction for atomicity:
+
+```javascript
+const runMigration = db.transaction(() => {
+    migrateGuilds();
+    migrateActiveRaids();
+    migrateRaidStats();
+    migratePermissions();
+    migrateAvailability();
+    migrateTemplates();
+});
+
+try {
+    runMigration();
+    console.log('Migration completed successfully!');
+    backupJsonFiles();
+} catch (error) {
+    console.error('Migration failed:', error);
+    process.exit(1);
+}
+```
+
+<Info>
+If any step fails, the entire migration is rolled back and the database remains unchanged.
+</Info>
+
+## Migration Output
+
+Successful migration displays a detailed summary:
+
+```
+==================================================
+WizBot SQLite Migration
+==================================================
+
+Database schema initialized
+
+Migrating guild configurations...
+  Migrated 5 guilds
+Migrating active raids...
+  Migrated 23 raids with 187 signups
+Migrating raid statistics...
+  Migrated 145 global stats, 298 guild stats
+Migrating permissions...
+  Migrated 12 admin roles, 8 command perms, 15 signup roles
+Migrating availability...
+  Migrated 34 availability entries
+Migrating template overrides...
+  Migrated 7 overrides, 3 custom templates
+
+Migration completed successfully!
+
+Backing up JSON files...
+  Backed up raidChannels
+  Backed up museumChannels
+  Backed up activeRaids
+  Backed up raidStats
+  ...
+
+Database summary:
+  Guilds: 5
+  Raids: 23
+  Signups: 187
+  User stats: 145
+  Guild user stats: 298
+
+==================================================
+To revert: delete data/wizbot.db and rename .json.migrated files back to .json
+==================================================
+```
+
+## Verification
+
+After migration, verify data integrity:
+
+### Check Record Counts
+
+```javascript
+const { getStats } = require('./db/database');
+const stats = getStats();
+console.log(stats);
+```
+
+### Query Sample Data
+
+```bash
+sqlite3 data/wizbot.db
+
+-- Check guilds
+SELECT * FROM guilds LIMIT 5;
+
+-- Check active raids
+SELECT message_id, raid_id, type, creator_id FROM raids;
+
+-- Check signups
+SELECT COUNT(*) as total_signups FROM signups;
+
+-- Check stats
+SELECT user_id, total_raids FROM user_stats ORDER BY total_raids DESC LIMIT 10;
+```
+
+### Compare Counts
+
+Compare JSON record counts with database:
+
+```javascript
+const oldData = JSON.parse(fs.readFileSync('data/active_raids.json.migrated'));
+console.log('JSON raids:', Object.keys(oldData).length);
+
+const dbCount = db.prepare('SELECT COUNT(*) as count FROM raids').get();
+console.log('DB raids:', dbCount.count);
+```
+
+## Troubleshooting
+
+### Migration Fails Partway
+
+**Problem:** Error during migration process
+
+**Solution:** The transaction ensures no partial data is committed. Fix the error and re-run:
+
+```bash
+# Delete the incomplete database
+rm data/wizbot.db data/wizbot.db-*
+
+# Restore JSON files if they were backed up
+for f in data/*.json.migrated; do mv "$f" "${f%.migrated}"; done
+
+# Run migration again
+node db/migrate.js
+```
+
+### Missing JSON Files
+
+**Problem:** Some JSON files don't exist
+
+**Solution:** This is normal. The migration script handles missing files gracefully:
+
+```javascript
+function readJsonFile(filePath) {
+    if (!fs.existsSync(filePath)) {
+        return null; // Return null for missing files
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+```
+
+### Corrupted JSON
+
+**Problem:** JSON parse error during migration
+
+**Solution:** Fix the corrupted JSON file manually or restore from backup before migrating.
+
+### Data Loss Concerns
+
+**Problem:** Want to verify no data was lost
+
+**Solution:** JSON files are preserved as `.json.migrated` backups. Compare record counts and spot-check critical data.
+
+## Reverting Migration
+
+If you need to revert to JSON files:
+
+```bash
+# Stop the bot
+pkill -f wizbot
+
+# Delete SQLite database
+rm data/wizbot.db data/wizbot.db-shm data/wizbot.db-wal
+
+# Restore JSON files
+cd data
+for f in *.json.migrated; do
+    mv "$f" "${f%.migrated}"
+done
+
+# Update code to use JSON storage
+# (requires code changes to use old JSON-based storage)
+```
+
+<Warning>
+Reverting requires code changes since the bot now expects SQLite. This should only be done in emergencies.
+</Warning>
+
+## Post-Migration
+
+After successful migration:
+
+1. **Test thoroughly** - Verify all bot functionality works
+2. **Monitor logs** - Watch for any database-related errors
+3. **Keep backups** - Store `.json.migrated` files safely for a few weeks
+4. **Update monitoring** - Enable database performance monitoring
+5. **Document changes** - Note the migration date for your records
+
+## Best Practices
+
+1. **Backup first** - Always create backups before migrating
+2. **Test migration** - Run on a test server before production
+3. **Verify data** - Check critical records after migration
+4. **Monitor performance** - Watch database metrics post-migration
+5. **Keep backups** - Retain JSON backups for rollback capability
+6. **Schedule downtime** - Migrate during low-usage periods
+
+## See Also
+
+- [Database Architecture](/advanced/database) - Understanding the SQLite schema
+- [Configuration](/configuration/setup) - Database configuration options
+- [Monitoring](/advanced/monitoring) - Track migration performance

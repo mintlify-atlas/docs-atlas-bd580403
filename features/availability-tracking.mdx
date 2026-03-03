@@ -1,0 +1,477 @@
+---
+title: 'Availability Tracking'
+description: 'Let members record their schedules and find optimal raid times'
+---
+
+# Availability Tracking
+
+RaidBot's availability system helps guilds schedule raids at times when the most members can participate. Members record their typical free times, and leadership can analyze the data to find optimal scheduling windows.
+
+## Overview
+
+The availability tracking system:
+
+<CardGroup cols={2}>
+  <Card title="Member-Driven" icon="user">
+    Players voluntarily share their schedules
+  </Card>
+  <Card title="Smart Parsing" icon="brain">
+    Natural language time input ("Mon-Fri 7-10pm")
+  </Card>
+  <Card title="Timezone Aware" icon="globe">
+    Supports all timezones with automatic conversion
+  </Card>
+  <Card title="Analytics Ready" icon="chart-line">
+    Find optimal times and check specific slots
+  </Card>
+</CardGroup>
+
+## Setting Your Availability
+
+Members can set their schedules using `/availability set`.
+
+<Steps>
+  <Step title="Run the command">
+    ```bash
+    /availability set
+    ```
+    This opens a modal with four fields.
+  </Step>
+  
+  <Step title="Fill out your schedule">
+    <ParamField path="Timezone" type="string" optional>
+      Your timezone (EST, PST, UTC-5, America/New_York, etc.)
+      
+      Examples:
+      - `EST` or `America/New_York`
+      - `PST` or `America/Los_Angeles`
+      - `GMT` or `Europe/London`
+      - `UTC-5` or `UTC+2`
+    </ParamField>
+    
+    <ParamField path="Preferred days/times" type="string" optional>
+      When you're typically available for raids
+      
+      Examples:
+      - `Mon-Fri 7-10pm`
+      - `Weekends 2-11pm`
+      - `Sat 2pm-6pm, Sun afternoons`
+      - `Weekdays evenings`
+      - `Everyday after 5pm`
+    </ParamField>
+    
+    <ParamField path="Preferred roles" type="string" optional>
+      Which raid roles you prefer to play
+      
+      Examples:
+      - `Vanguard, Support`
+      - `Flex, Gates, Minions`
+      - `Any role needed`
+    </ParamField>
+    
+    <ParamField path="Notes" type="text" optional>
+      Any other scheduling constraints or information
+      
+      Examples:
+      - `Can't do Tuesday/Thursday`
+      - `Available for impromptu runs`
+      - `Prefer 1.5hr keys`
+    </ParamField>
+  </Step>
+  
+  <Step title="Submit">
+    The bot parses your time windows and confirms what it understood:
+    
+    ```
+    Availability saved.
+    
+    Parsed time windows (EST):
+    • Monday 7:00 PM-10:00 PM
+    • Tuesday 7:00 PM-10:00 PM
+    • Wednesday 7:00 PM-10:00 PM
+    • Thursday 7:00 PM-10:00 PM
+    • Friday 7:00 PM-10:00 PM
+    ```
+  </Step>
+</Steps>
+
+<Info>
+  All time windows are stored in UTC and converted to your timezone for display. This ensures accurate matching across different timezones.
+</Info>
+
+## Time Input Examples
+
+The bot supports flexible natural language time input:
+
+<CodeGroup>
+```text Weekday Ranges
+Mon-Fri 7-10pm
+Monday-Friday 7pm-10pm
+Weekdays evenings
+Weekdays 6-11pm
+```
+
+```text Weekend Schedules
+Weekends 2-11pm
+Sat-Sun 12pm-8pm
+Saturday and Sunday afternoons
+Weekends all day
+```
+
+```text Specific Days
+Monday 7-9pm
+Wednesday and Friday 8-11pm
+Sat 2pm-6pm, Sun 3pm-7pm
+Tuesday evenings
+```
+
+```text Flexible Phrases
+After 5pm every day
+Evenings on weekdays
+Mornings on weekends
+Anytime after 6pm
+```
+</CodeGroup>
+
+<Warning>
+  If the bot can't parse your input, you'll see a warning. Try rephrasing with more specific times (e.g., "Mon-Fri 7-10pm" instead of "weeknights").
+</Warning>
+
+## Viewing Availability
+
+### View Your Own
+
+```bash
+/availability view
+```
+
+Shows your recorded availability with:
+- Timezone
+- Preferred days/times
+- Preferred roles
+- Notes
+- Parsed time windows
+
+### View Another Member
+
+```bash
+/availability view user:@Player
+```
+
+Anyone can view any member's publicly recorded availability.
+
+## Server-Wide Analytics
+
+### Availability Summary
+
+```bash
+/availability summary
+```
+
+Generates a heatmap showing when the most members are available:
+
+```
+Server Availability Summary
+28 members have recorded their availability.
+Times shown in EST
+
+Hottest Time Slots:
+─────────────────────────
+Day       Time      Users
+─────────────────────────
+Friday    7 PM      ███████████████ 15
+Saturday  7 PM      ██████████████ 14
+Friday    8 PM      █████████████ 13
+Sunday    6 PM      ████████████ 12
+Saturday  8 PM      ████████████ 12
+```
+
+**Best Times for Raids:**
+1. **Friday 7 PM** — 15 available
+2. **Saturday 7 PM** — 14 available
+3. **Friday 8 PM** — 13 available
+
+<Tip>
+  Use this data to schedule recurring raids at peak availability times.
+</Tip>
+
+### Find Optimal Times
+
+```bash
+/availability optimal min_users:8
+```
+
+Find all time slots with at least 8 available members:
+
+```yaml
+Optimal Times (8+ users)
+Times shown in EST
+
+Friday:
+  7 PM (15 users), 8 PM (13 users), 9 PM (10 users)
+  
+Saturday:
+  7 PM (14 users), 8 PM (12 users), 6 PM (9 users)
+  
+Sunday:
+  6 PM (12 users), 7 PM (10 users), 5 PM (8 users)
+```
+
+### Check Specific Time
+
+```bash
+/availability check time:"Saturday 7pm"
+```
+
+See exactly who's available at a particular time:
+
+```
+Availability Check
+Time: Saturday, March 15, 2026 at 7:00 PM EST
+
+14 members available:
+@PlayerOne, @PlayerTwo, @PlayerThree, @PlayerFour,
+@PlayerFive, @PlayerSix, @PlayerSeven, @PlayerEight,
+@PlayerNine, @PlayerTen, @PlayerEleven, @PlayerTwelve,
+@PlayerThirteen, @PlayerFourteen
+```
+
+Time formats accepted:
+- Natural language: `Saturday 7pm`, `tomorrow 8pm`, `next Friday 6:30pm`
+- Unix timestamp: `1735689600`
+
+## Administrative Features
+
+### Set Availability for Others
+
+Admins can set availability for members who can't do it themselves:
+
+```bash
+/availability set user:@Player
+```
+
+Requires **Manage Server** permission.
+
+### View All Members
+
+```bash
+/availability list
+```
+
+See all members who have set availability, with parse status:
+
+```
+Availability List
+28 members have set their availability.
+
+✓ PlayerOne (EST)
+   Mon-Fri 7-10pm
+   
+✓ PlayerTwo (PST)
+   Weekends 6-11pm
+   
+⚠️ PlayerThree (EST)
+   sometimes in the evening
+   
+✓ PlayerFour (GMT)
+   Sat-Sun afternoons
+```
+
+<Info>
+  The ⚠️ indicator means the time input couldn't be parsed into specific windows. Contact that member to help them rephrase their availability.
+</Info>
+
+### Clear Availability
+
+```bash
+/availability clear
+/availability clear user:@Player  # admin only
+```
+
+Remove availability data (your own or another member's).
+
+## Persistent Signup Button
+
+Post a permanent availability button in a channel:
+
+```bash
+/availability post-button
+```
+
+This creates an embed with a "Set Availability" button that any member can click to open the form.
+
+**Use cases:**
+- Pin in your raid signup channel
+- Add to onboarding/welcome channels
+- Include in guild rules or info sections
+
+Example embed:
+
+```yaml
+Set Your Availability
+
+Click the button below to set your availability for raids and events.
+
+Your availability helps leadership schedule events at times
+when the most members can participate.
+
+What you can specify:
+• Timezone — EST, PST, UTC-5, GMT+1, etc.
+• Preferred Days/Times — When you're typically free
+• Preferred Roles — What roles you like to play
+• Notes — Any other scheduling constraints
+
+Example availability formats:
+Mon-Fri 7-10pm
+Weekends 6-11pm
+Sat 2pm-6pm, Sun afternoons
+Weekdays evenings
+Everyday after 5pm
+
+[Set Availability]
+```
+
+## Integration with Other Features
+
+### Find Sub Feature
+
+When using `/raid` panel → **Find Sub**, the system:
+
+1. Checks role experience (who's played this role before)
+2. Checks availability (who's marked as free at the raid time)
+3. Ranks candidates with availability boosted higher
+
+Example output:
+```
+🔍 Substitute Candidates for Vanguard
+
+1. @PlayerName — 15x Vanguard, 42 total raids ✅ available
+2. @OtherPlayer — 8x Vanguard, 23 total raids
+3. @ThirdPlayer — 5x Vanguard, 31 total raids ✅ available
+```
+
+The ✅ indicates the user has recorded availability that includes the raid time.
+
+### User Statistics
+
+Availability data appears in `/stats user` output:
+
+```yaml
+PlayerName's Stats
+
+Total Raids: 42
+Attendance: 🌟 94.2%
+No-Shows: ✅ 0
+
+Favorite Role: Vanguard (18)
+Favorite Raid Type: Darkmoor (12)
+Most Active Day: Friday
+
+Timezone: EST
+Preferred Days: Mon-Fri 7-10pm
+Preferred Roles: Vanguard, Support
+Notes: Available for impromptu runs
+```
+
+## Timezone Handling
+
+The bot supports various timezone formats:
+
+<Tabs>
+  <Tab title="Named Timezones">
+    Full IANA timezone database names:
+    - `America/New_York`
+    - `America/Los_Angeles`
+    - `America/Chicago`
+    - `Europe/London`
+    - `Europe/Paris`
+    - `Asia/Tokyo`
+    - `Australia/Sydney`
+  </Tab>
+  
+  <Tab title="Abbreviations">
+    Common timezone abbreviations:
+    - `EST` (Eastern Standard Time)
+    - `PST` (Pacific Standard Time)
+    - `CST` (Central Standard Time)
+    - `MST` (Mountain Standard Time)
+    - `GMT` (Greenwich Mean Time)
+  </Tab>
+  
+  <Tab title="UTC Offsets">
+    Numeric offsets from UTC:
+    - `UTC-5` (EST)
+    - `UTC-8` (PST)
+    - `UTC+1` (Central European Time)
+    - `UTC+9` (Japan Standard Time)
+  </Tab>
+</Tabs>
+
+<Warning>
+  Abbreviations like "EST" don't automatically adjust for daylight saving time. Use IANA names (like `America/New_York`) for automatic DST handling.
+</Warning>
+
+## Privacy Considerations
+
+Availability data is:
+
+<Check>✓ Visible to all server members</Check>
+<Check>✓ Used for scheduling analysis</Check>
+<Check>✓ Integrated with Find Sub feature</Check>
+<Check>✓ Displayed in your user stats</Check>
+<Check>✓ Voluntary (you choose what to share)</Check>
+
+<Info>
+  Only share availability information you're comfortable with being public in your server. You can update or clear it anytime.
+</Info>
+
+## Best Practices
+
+<Tip>
+  **Be specific with times** — "Mon-Fri 7-10pm" parses better than "weeknight evenings".
+</Tip>
+
+<Tip>
+  **Update regularly** — If your schedule changes, update your availability so leadership has accurate data.
+</Tip>
+
+<Tip>
+  **Use the post-button feature** in your raid channel to encourage new members to set availability.
+</Tip>
+
+<Tip>
+  **Review the summary monthly** to identify the best times for recurring raids.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="My times didn't parse">
+    Try more specific formats:
+    - ✅ `Mon-Fri 7-10pm`
+    - ❌ `weeknights`
+    
+    - ✅ `Weekends 2-6pm`
+    - ❌ `weekend afternoons`
+    
+    Include actual times (7pm, 8pm, etc.) rather than vague periods.
+  </Accordion>
+  
+  <Accordion title="Times showing in wrong timezone">
+    - Check your timezone field is set correctly
+    - Use full IANA names (`America/New_York`) instead of abbreviations
+    - The bot displays times in YOUR timezone, not the original poster's
+  </Accordion>
+  
+  <Accordion title="Can't see who's available at a specific time">
+    - Use `/availability check time:"Saturday 7pm"`
+    - Make sure to quote the time if it has spaces
+    - Try Unix timestamp if natural language isn't working
+  </Accordion>
+</AccordionGroup>
+
+## Related Features
+
+- [Raid Management](/features/raid-management) - Find Sub uses availability data
+- [Recurring Raids](/features/recurring-raids) - Schedule at optimal availability times
+- [Stats & Analytics](/features/stats-analytics) - Availability shown in user stats

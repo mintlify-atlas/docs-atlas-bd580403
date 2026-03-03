@@ -1,0 +1,266 @@
+---
+title: Creating Raids
+description: Learn how to create raid signups, museum runs, key bosses, and challenge mode events using the interactive creation flow
+---
+
+RaidBot provides an interactive creation flow that guides you through setting up different types of signups. Use the `/create` command to start.
+
+## Types of Signups
+
+You can create several types of signups:
+
+<CardGroup cols={2}>
+  <Card title="Raid Signups" icon="dragon">
+    Template-based raids like Dragonspyre, Lemuria, and Polaris
+  </Card>
+  <Card title="Museum Signups" icon="landmark">
+    Simple 12-player museum runs
+  </Card>
+  <Card title="Gold Key Boss" icon="key">
+    Team-based key boss runs (1-4 teams)
+  </Card>
+  <Card title="Challenge Mode" icon="bolt">
+    Team-based challenge dungeon runs
+  </Card>
+</CardGroup>
+
+## Creating a Raid
+
+<Steps>
+  <Step title="Start the creation flow">
+    Run the `/create` command. You'll see an interactive panel with dropdowns and buttons.
+
+    ```bash
+    /create
+    ```
+
+    <Note>
+      This command requires the **Manage Server** permission.
+    </Note>
+  </Step>
+
+  <Step title="Select the activity type">
+    Choose from the dropdown menu:
+    - **Dragonspyre (Voracious Void)** - Requires length and strategy selection
+    - **Lemuria (Ghastly Conspiracy)** - Requires length selection
+    - **Polaris (Cabal's Revenge)** - Requires length selection
+    - **Museum Signup** - Simple 12-player signup
+    - **Gold Key Boss** - Team-based with customizable boss name
+    - **Challenge Mode** - Team-based challenge dungeons
+
+    Once selected, the type is locked in and you'll see additional options based on your choice.
+  </Step>
+
+  <Step title="Configure raid-specific options">
+    Depending on the type you selected, you may need to configure:
+
+    <Tabs>
+      <Tab title="Regular Raids">
+        **Length** (required): Choose between:
+        - 1.5 hours
+        - 3 hours
+
+        **Strategy** (Dragonspyre only): Choose between:
+        - Triple Storm
+        - 2 Myth 1 Storm
+
+        <Info>
+          The strategy selection dynamically updates the role composition. For example, "2 Myth 1 Storm" changes the vanguard roles to include two Myth slots instead of three Storm slots.
+        </Info>
+      </Tab>
+
+      <Tab title="Key Boss / Challenge Mode">
+        **Number of Teams** (required): Select 1-4 teams
+        - Each team holds 4 players
+        - 1 Team = 4 slots
+        - 2 Teams = 8 slots
+        - 3 Teams = 12 slots
+        - 4 Teams = 16 slots
+
+        **Boss/Dungeon Name** (optional but recommended):
+        Click "Set boss name" (or "Set dungeon name" for Challenge Mode) and enter the name in the modal.
+
+        Example boss names:
+        - Rattlebones
+        - Malistaire
+        - Jabberwock
+
+        **Participation Tracking**:
+        Toggle whether this signup counts toward weekly participation requirements.
+        - Green checkmark = Counts toward participation
+        - Red X = Does not count
+      </Tab>
+
+      <Tab title="Museum">
+        Museum signups don't require additional configuration. They automatically:
+        - Allow up to 12 players
+        - Use a simple checkmark reaction signup
+        - Support waitlists when full
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Set the date and time">
+    Click the **"Set date/time"** button. A modal will appear asking for the raid time.
+
+    Enter a natural language time like:
+    - `tomorrow 7pm`
+    - `friday at 8pm`
+    - `next saturday 3pm EST`
+    - `2026-03-15 19:00`
+
+    Or use a Unix timestamp:
+    - `1741392000`
+
+    <Tip>
+      RaidBot uses the **chrono-node** library for intelligent date parsing. It understands most natural language date formats and respects your server's configured timezone.
+    </Tip>
+
+    <Warning>
+      If the time cannot be parsed, you'll receive an error. Make sure to use clear, unambiguous time formats.
+    </Warning>
+  </Step>
+
+  <Step title="Review and create">
+    The summary embed shows all your selections:
+    - Type
+    - Boss/Dungeon name (if applicable)
+    - Number of teams (if applicable)
+    - Participation setting (if applicable)
+    - Date/Time
+    - Length (for regular raids)
+    - Strategy (for Dragonspyre)
+
+    When all required fields are filled, the **Create** button will be enabled. Click it to create the signup!
+  </Step>
+
+  <Step title="Signup posted">
+    The signup message is posted to the configured channel:
+    - **Regular raids** → `#raid-signups` (or configured channel)
+    - **Museum** → `#museum-signups` (or configured channel)
+    - **Key Boss** → `#key-signups` (or configured channel)
+    - **Challenge Mode** → `#challenge-signups` (or configured channel)
+
+    The bot will:
+    - Add reaction emojis for each role/team
+    - Create a discussion thread (if threads are enabled)
+    - Generate a unique Raid ID
+    - Update the bot presence to show active raids
+  </Step>
+</Steps>
+
+## Channel Configuration
+
+By default, RaidBot looks for channels with these names:
+- `raid-signups` or `raid signups`
+- `museum-signups` or `museum signups`
+- `key-signups`, `key signups`, or `key-boss`
+- `challenge-signups` or `challenge signups`
+
+If these channels don't exist, use `/setchannel` to configure custom channels:
+
+```bash
+/setchannel type:raid channel:#your-raid-channel
+/setchannel type:museum channel:#your-museum-channel
+/setchannel type:key channel:#your-key-channel
+/setchannel type:challenge channel:#your-challenge-channel
+```
+
+## Discussion Threads
+
+When threads are enabled in your server settings, RaidBot automatically creates a discussion thread for each signup:
+
+- Thread name format: `{Raid Type} - {Raid ID}`
+- Example: `Dragonspyre (Voracious Void) - ABC123`
+- Auto-archive duration is configurable
+- Thread is archived when the raid is closed
+
+<Tip>
+  Enable threads in your server with `/settings threads:true` to give each raid its own discussion space!
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use descriptive boss names">
+    For key boss and challenge mode signups, always include the boss or dungeon name. This helps players quickly identify what they're signing up for.
+
+    Good examples:
+    - `Jabberwock (Gold Key)`
+    - `Mount Olympus`
+    - `Darkmoor Graveyard`
+  </Accordion>
+
+  <Accordion title="Plan ahead with time zones">
+    If your server has members in different time zones, consider:
+    - Setting a default server timezone in `/settings`
+    - Mentioning the timezone in announcements
+    - Using Discord's timestamp format (automatically shown in each user's local time)
+  </Accordion>
+
+  <Accordion title="Choose appropriate raid length">
+    - **1.5 hours**: Best for experienced groups who can complete quickly
+    - **3 hours**: Allows more time for newer players or challenging content
+
+    The length is displayed prominently in the signup embed as a badge.
+  </Accordion>
+
+  <Accordion title="Use participation tracking wisely">
+    For optional fun runs or practice sessions, disable participation tracking. This prevents the signup from affecting weekly participation requirements.
+
+    For official guild raids, keep it enabled to track member activity.
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+<CodeGroup>
+```text Dragonspyre Example
+Type: Dragonspyre (Voracious Void)
+Time: tomorrow 7pm EST
+Length: 3 hours
+Strategy: Triple Storm
+
+✅ Creates a 3-hour Dragonspyre raid with triple storm strategy
+```
+
+```text Museum Example
+Type: Museum Signup
+Time: friday 6pm
+
+✅ Creates a simple museum run for up to 12 players
+```
+
+```text Gold Key Boss Example
+Type: Gold Key Boss
+Boss: Jabberwock
+Teams: 2 (8 slots total)
+Time: saturday 3pm
+Participation: Yes ✅
+
+✅ Creates a 2-team key boss signup for Jabberwock
+```
+
+```text Challenge Mode Example
+Type: Challenge Mode
+Dungeon: Mount Olympus
+Teams: 3 (12 slots total)
+Time: sunday 5pm
+Participation: No ❌
+
+✅ Creates a 3-team challenge mode run (practice, no participation credit)
+```
+</CodeGroup>
+
+## Next Steps
+
+After creating a raid, you'll want to:
+
+<CardGroup cols={2}>
+  <Card title="Manage Raids" icon="sliders" href="/guides/managing-raids">
+    Learn how to close, reopen, or modify raid signups
+  </Card>
+  <Card title="Understand Signups" icon="user-check" href="/guides/signup-process">
+    See how players sign up and how waitlists work
+  </Card>
+</CardGroup>

@@ -1,0 +1,266 @@
+---
+title: /templates
+description: Manage raid templates - enable/disable, rename, or create custom templates
+---
+
+The `/templates` command provides an interactive interface to manage raid templates, including built-in templates (Dragonspyre, Lemuria, Polaris) and custom templates you create.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/templates
+```
+
+## Overview
+
+Raid templates define:
+- **Name** - Display name (e.g., "Dragonspyre (Voracious Void)")
+- **Emoji** - Visual indicator (e.g., 🔥)
+- **Color** - Embed color (hex code)
+- **Description** - Flavor text shown on signup
+- **Role Groups** - Organized list of roles (Vanguard, Support, etc.)
+
+## Built-in Templates
+
+RaidBot includes three built-in templates:
+
+**Dragonspyre (Voracious Void)**
+- 12 role slots
+- Vanguard group: 3 Storm + 1 Jade (or 2 Myth + 1 Storm + 1 Jade)
+- Support group: 2 Surges + 1 Purify
+- Gates: 4 Gate roles + 1 Flex
+
+**Lemuria (Ghastly Conspiracy)**
+- 12 role slots
+- Vanguard, Support, and Gates groups
+- Supports side assignments (Left/Right Bomb/Polymorph/Automaton)
+
+**Polaris (Cabal's Revenge)**
+- 12 role slots
+- Vanguard, Support, and Gates groups
+
+<Note>
+Built-in templates cannot be edited directly. Duplicate them to create editable custom versions.
+</Note>
+
+## Template Management
+
+### Main Panel
+
+Running `/templates` shows:
+- List of all templates (built-in + custom)
+- Status (Enabled or Disabled)
+- Override names (if renamed)
+- Type (Built-in or Custom)
+
+### Template Actions
+
+Select a template to access:
+
+<Tabs>
+  <Tab title="Enable/Disable">
+    Toggle whether the template appears in [/create](/commands/create).
+    
+    **Disabled templates:**
+    - Don't appear in activity type dropdown
+    - Existing raids using the template remain functional
+    - Can be re-enabled at any time
+    
+    **Use case:**
+    Temporarily hide templates for raids you're not currently running.
+  </Tab>
+  <Tab title="Rename">
+    Override the template's display name for your server.
+    
+    **Example:**
+    - Base: "Dragonspyre (Voracious Void)"
+    - Override: "Dragonspyre Raid"
+    
+    **Effect:**
+    - Shows your custom name in `/create` dropdown
+    - Shows on raid signups
+    - Doesn't affect the base template
+  </Tab>
+  <Tab title="Edit Basic Info">
+    Modify template metadata:
+    - Display name
+    - Emoji (shown on signup embeds)
+    - Color (hex code for embed color)
+    
+    **For custom templates:**
+    Changes are saved directly.
+    
+    **For built-in templates:**
+    Creates an override (doesn't modify the base template).
+  </Tab>
+  <Tab title="Edit Roles">
+    **Custom templates only** - modify the role structure.
+    
+    Opens a modal where you enter roles in this format:
+    ```
+    Group|Emoji|Role|Slots|Icon
+    ```
+    
+    **Example:**
+    ```
+    Vanguard|1️⃣|Storm 1|1|<:Storm:1430690317421776957>
+    Vanguard|2️⃣|Storm 2|1|<:Storm:1430690317421776957>
+    Vanguard|3️⃣|Storm 3|1|<:Storm:1430690317421776957>
+    Vanguard|4️⃣|Jade|1|<:Balance:1430673056380092457>
+    Support|5️⃣|Surge 1|1|<:Death:1430673291095662623>
+    Support|6️⃣|Surge 2|1|<:Death:1430673291095662623>
+    ```
+    
+    **Fields:**
+    - **Group** - Group name (e.g., Vanguard, Support, Gates)
+    - **Emoji** - Reaction emoji (numbered or custom)
+    - **Role** - Role name (e.g., Storm 1, Jade)
+    - **Slots** - How many of this role (usually 1)
+    - **Icon** - Optional custom emoji for display
+  </Tab>
+  <Tab title="Duplicate">
+    Create a copy of the template (works for built-in and custom).
+    
+    **Result:**
+    - New custom template named "[Original Name] Copy"
+    - Includes all roles and settings from original
+    - Can be edited and customized
+    
+    **Use case:**
+    Duplicate a built-in template to create a modified version (e.g., Dragonspyre with different role setup).
+  </Tab>
+  <Tab title="Reset">
+    **Built-in templates only** - remove all overrides.
+    
+    Resets:
+    - Name back to default
+    - Emoji back to default
+    - Color back to default
+    - Enabled/disabled state back to enabled
+  </Tab>
+  <Tab title="Delete">
+    **Custom templates only** - permanently remove the template.
+    
+    **Warning:**
+    - Cannot be undone
+    - Does not affect existing raids using this template
+    - Removes from `/create` dropdown
+  </Tab>
+</Tabs>
+
+## Creating Custom Templates
+
+Click "Create new" to make a custom template:
+
+### Step 1: Basic Info
+
+Enter:
+- **Name** - Display name (required)
+- **Emoji** - Visual indicator (optional)
+- **Color** - Hex color like `#ff9900` (optional)
+
+### Step 2: Add Roles
+
+Click "Edit roles" and enter role lines:
+
+```
+Vanguard|1️⃣|Storm 1|1|<:Storm:...>
+Vanguard|2️⃣|Storm 2|1|<:Storm:...>
+Support|3️⃣|Jade|1|<:Balance:...>
+```
+
+### Step 3: Enable
+
+Toggle "Enable" so it appears in `/create`.
+
+## Role Format Details
+
+**Group Names:**
+- Can be anything (Vanguard, DPS, Healers, etc.)
+- Roles are grouped under these headers on signup embeds
+
+**Emojis:**
+- Use numbered emojis: `1️⃣`, `2️⃣`, `3️⃣`, etc.
+- Or custom emojis: `:custom_emoji:`
+- Each role needs a unique emoji (used for reactions)
+
+**Slots:**
+- Usually `1` (one person in this role)
+- Can be higher for duplicate roles
+
+**Icons:**
+- Optional custom emoji shown next to role name
+- Format: `<:EmojiName:1234567890>`
+- Get this by typing `\:emoji_name:` in Discord
+
+## Examples
+
+<CodeGroup>
+```text Disable Polaris Template
+/templates
+→ Select "Polaris (Cabal's Revenge)"
+→ Click "Disable"
+→ Template hidden from /create
+```
+
+```text Rename Dragonspyre
+/templates
+→ Select "Dragonspyre (Voracious Void)"
+→ Click "Rename"
+→ Enter "DS Raid"
+→ Shows as "DS Raid" in /create
+```
+
+```text Create Custom 8-Person Raid
+/templates
+→ Click "Create new"
+→ Name: "Avalon Raid"
+→ Emoji: ⚔️
+→ Color: #0099ff
+→ Edit roles:
+DPS|1️⃣|Storm|1|<:Storm:...>
+DPS|2️⃣|Fire|1|<:Fire:...>
+DPS|3️⃣|Balance|1|<:Balance:...>
+Support|4️⃣|Life 1|1|<:Life:...>
+Support|5️⃣|Life 2|1|<:Life:...>
+Tank|6️⃣|Ice|1|<:Ice:...>
+Utility|7️⃣|Death|1|<:Death:...>
+Utility|8️⃣|Myth|1|<:Myth:...>
+```
+
+```text Duplicate and Modify Lemuria
+/templates
+→ Select "Lemuria (Ghastly Conspiracy)"
+→ Click "Duplicate to edit roles"
+→ Template copied as "Lemuria (Ghastly Conspiracy) Copy"
+→ Click "Edit roles" to customize
+```
+</CodeGroup>
+
+## Best Practices
+
+**Template Design:**
+- Keep role counts reasonable (8-12 for most raids)
+- Use clear role names ("Storm 1" not "S1")
+- Group related roles together (Vanguard, Support, etc.)
+- Use consistent emoji styles (all numbered or all custom)
+
+**Naming:**
+- Be descriptive ("Dragonspyre Raid" not "DS")
+- Include strategy if relevant ("DS - Triple Storm")
+- Avoid special characters that break formatting
+
+**Custom Emojis:**
+- Upload school emojis to your server
+- Use `\:emoji:` in Discord to get the ID
+- Format: `<:Name:1234567890>`
+
+## Related Commands
+
+- [/create](/commands/create) - Create raids using templates
+- [/recurring](/commands/recurring) - Create recurring raids with templates
+- [/settings](/commands/settings) - Other bot configuration

@@ -1,80 +1,220 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get WizBot up and running in your Discord server in minutes
 ---
 
-## Get started in three steps
+## Quick Setup
 
-Get your documentation site running locally and make your first customization.
+Get WizBot operational in your Discord server with these essential steps.
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Install Dependencies">
+    Clone the repository and install required packages:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    git clone <repository-url>
+    cd wizbot
+    npm install
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    This installs discord.js, chrono-node, better-sqlite3, and other dependencies.
+  </Step>
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+  <Step title="Configure Bot Credentials">
+    Create a `config.json` file in the root directory:
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```json
+    {
+      "clientId": "YOUR_CLIENT_ID",
+      "token": "YOUR_BOT_TOKEN",
+      "allowedGuildIds": ["GUILD_ID_1", "GUILD_ID_2"],
+      "ownerId": "YOUR_USER_ID"
+    }
+    ```
+    
+    <Note>
+      - `allowedGuildIds` is optional — leave empty `[]` to allow all guilds
+      - `ownerId` is optional — enables DM-based performance alerts
+    </Note>
+    
+    **Alternative: Environment Variables**
+    
+    Instead of `config.json`, you can use environment variables:
+    
+    ```bash
+    export DISCORD_CLIENT_ID="YOUR_CLIENT_ID"
+    export DISCORD_TOKEN="YOUR_BOT_TOKEN"
+    export DISCORD_ALLOWED_GUILDS="GUILD_ID_1,GUILD_ID_2"
+    export BOT_OWNER_ID="YOUR_USER_ID"
+    ```
+  </Step>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+  <Step title="Start the Bot">
+    Launch WizBot:
+    
+    ```bash
+    node bot.js
+    ```
+    
+    You should see confirmation that the bot is logged in and commands are registered.
+  </Step>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+  <Step title="Configure Channels">
+    In your Discord server, use `/setchannel` to designate channels for different signup types:
+    
+    - **Raid signups** — For Dragonspyre, Lemuria, Polaris raids
+    - **Museum signups** — For museum runs
+    - **Key boss signups** — For gold key bosses
+    - **Challenge mode signups** — For challenge dungeons
+    - **Audit log** — For tracking bot actions
+    
+    <Tip>
+      WizBot will auto-detect channels named `raid-signups`, `museum-signups`, etc. if you don't configure them manually.
+    </Tip>
+  </Step>
 
-### Step 3: Go live
+  <Step title="Create Your First Raid">
+    Use the `/create` command to launch the interactive raid creation flow:
+    
+    1. Select the raid type (Dragonspyre, Lemuria, Polaris, Museum, etc.)
+    2. Set the date and time using natural language: `"tomorrow 7pm"` or `"next Friday 6:30"`
+    3. Choose raid length (1.5 or 3 hours) if applicable
+    4. For Dragonspyre, select strategy (Triple Storm or 2 Myth 1 Storm)
+    5. Click **Create** to post the signup
+    
+    Users can now react with role emojis to sign up!
+  </Step>
+</Steps>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+## Essential Commands
 
-## Next steps
+Here are the commands you'll use most frequently:
 
-Now that you have your docs running, explore these key features:
+### For Raid Organizers
 
-<CardGroup cols={2}>
+```bash
+/create                    # Interactive raid creation flow
+/raid <raid_id>           # Manage existing raid (close, reopen, delete, change time)
+/recurring action:create   # Set up automatic recurring raids
+/raidsignup action:assign  # Manually assign users to slots
+```
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+### For All Users
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+```bash
+/raidinfo action:list      # View upcoming raids
+/stats user                # Check your participation stats
+/availability set          # Record when you're available
+/help                      # View all commands with descriptions
+```
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+## Quick Examples
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+### Creating a Dragonspyre Raid
 
-</CardGroup>
+<CodeGroup>
+
+```text Example Flow
+1. Run /create
+2. Select "Dragonspyre (Voracious Void)"
+3. Choose "3 hours" for key length
+4. Select "triple storm" strategy
+5. Enter time: "Saturday 8pm EST"
+6. Click Create
+```
+
+</CodeGroup>
+
+WizBot parses the time, creates the signup post with role reaction emojis, and automatically creates a discussion thread.
+
+### Setting Up a Weekly Raid
+
+<CodeGroup>
+
+```text Recurring Setup
+1. Run /recurring action:create
+2. Select raid type: "Lemuria (Ghastly Conspiracy)"
+3. Set spawn time: 24 hours before raid start
+4. Choose pattern: "weekly"
+5. Set raid start time: "Every Saturday 8pm"
+```
+
+</CodeGroup>
+
+The raid signup will automatically post every Saturday at 8pm (or 24 hours before, depending on your spawn time configuration).
+
+### Checking Participation
+
+```bash
+/stats user              # Your personal stats
+/stats server            # Top participants server-wide
+/stats weekly weeks_back:2   # Compare last 2 weeks
+```
+
+## Natural Language Time Parsing
+
+WizBot uses chrono-node for flexible time input. All of these work:
+
+- `tomorrow 7pm`
+- `next Friday 6:30pm`
+- `Saturday at 8`
+- `in 3 hours`
+- `2024-12-25 19:00`
+- Unix timestamp: `1735156800`
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Set your server's default timezone with `/settings` to ensure accurate time parsing for all members.
 </Note>
+
+## Reaction-Based Signups
+
+When a raid is posted, users sign up by reacting with the appropriate emoji:
+
+1. **React** with your preferred role emoji (e.g., ⚔️ for Vanguard, 🛡️ for Support)
+2. **Automatic slot assignment** — WizBot adds you to the first available slot
+3. **Waitlist handling** — If slots are full, you're added to the waitlist
+4. **DM notifications** — Get notified when you're promoted from waitlist
+5. **Remove reaction** to cancel your signup
+
+### Special Features
+
+- **Side assignment** (Lemuria) — Use `/raidsignup action:side` to specify Light/Dark/Flex
+- **Team-based signups** (Key bosses, Challenge Mode) — React with team numbers 1️⃣ 2️⃣ 3️⃣ 4️⃣
+- **Museum auto-lock** — Museum signups automatically lock at start time
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Installation Guide"
+    icon="download"
+    href="/installation"
+  >
+    Detailed setup instructions, environment variables, and database configuration
+  </Card>
+  <Card
+    title="Commands Reference"
+    icon="terminal"
+    href="/commands"
+  >
+    Complete list of all commands with parameters and examples
+  </Card>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/configuration"
+  >
+    Customize reminder timing, permissions, templates, and server settings
+  </Card>
+  <Card
+    title="Advanced Features"
+    icon="wand-magic-sparkles"
+    href="/advanced"
+  >
+    Recurring raids, availability tracking, polling, and analytics
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+Use `/help` in Discord to view interactive command documentation, or check `/ping` to verify bot health and status.

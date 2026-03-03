@@ -1,0 +1,359 @@
+---
+title: Raid Templates
+description: Customize raid types, roles, and signup templates
+---
+
+RaidBot supports customizable raid templates that define the roles, positions, and appearance of raid signups. You can enable/disable built-in templates, rename them, or create custom templates from scratch.
+
+## Template Types
+
+RaidBot includes two types of templates:
+
+<CardGroup cols={2}>
+  <Card title="Built-in Templates" icon="book">
+    Pre-configured templates for popular Wizard101 raids (Dragonspyre, Lemuria, Polaris, etc.)
+  </Card>
+  <Card title="Custom Templates" icon="wand-magic-sparkles">
+    User-created templates with custom roles, emojis, and configurations
+  </Card>
+</CardGroup>
+
+## Managing Templates
+
+Use the `/templates` command to manage raid templates:
+
+```
+/templates
+```
+
+This opens an interactive panel showing:
+
+- All available templates (built-in and custom)
+- Template status (enabled/disabled)
+- Override names
+- Template type
+
+<Note>
+  The interactive panel times out after 5 minutes of inactivity (commands/templates.js:39).
+</Note>
+
+## Template Operations
+
+### Viewing Templates
+
+The summary view shows all templates with:
+
+- **Status:** Enabled or Disabled
+- **Override name:** Custom display name (if set)
+- **Type:** Built-in or Custom
+
+### Enable/Disable Templates
+
+1. Run `/templates`
+2. Select a template from the dropdown
+3. Click "Enable" or "Disable" button
+
+Disabled templates:
+
+- Don't appear in the `/create` command dropdown
+- Can't be used for new signups
+- Existing signups using the template remain functional
+
+<Tip>
+  Disable templates you don't use to reduce clutter in the raid creation menu.
+</Tip>
+
+### Rename Templates
+
+Override the display name of any template:
+
+1. Run `/templates`
+2. Select a template from the dropdown
+3. Click "Rename" button
+4. Enter new display name in the modal
+5. Confirm to save
+
+Renamed templates:
+
+- Show the custom name in `/create` dropdown
+- Keep original roles and configuration
+- Can be reset to original name
+
+### Edit Template Metadata
+
+Customize template appearance:
+
+1. Run `/templates`
+2. Select a template from the dropdown
+3. Click "Edit basic" button
+4. Update fields:
+   - **Display name:** Template name shown in menus
+   - **Emoji:** Optional emoji prefix
+   - **Hex color:** Embed color (e.g., `#ff9900`)
+5. Confirm to save
+
+<CodeGroup>
+```
+Display name: Void Raid Night
+Emoji: 🌙
+Color: #9b59b6
+```
+
+```
+Display name: Speed Farm
+Emoji: ⚡
+Color: #f1c40f
+```
+</CodeGroup>
+
+### Reset Built-in Templates
+
+Restore a built-in template to default settings:
+
+1. Run `/templates`
+2. Select a built-in template
+3. Click "Reset" button
+
+This removes all overrides (name, emoji, color, disabled status).
+
+<Warning>
+  Reset is permanent and cannot be undone. The template reverts to original built-in configuration.
+</Warning>
+
+## Custom Templates
+
+### Creating Custom Templates
+
+Create new raid templates from scratch:
+
+1. Run `/templates`
+2. Click "Create new" button
+3. Fill in the modal:
+   - **Template name:** Display name (required)
+   - **Emoji:** Optional emoji prefix
+   - **Hex color:** Optional embed color
+4. Confirm to create
+
+The new template is created with no roles. Add roles using the "Edit roles" button.
+
+### Duplicating Templates
+
+Clone an existing template to customize it:
+
+1. Run `/templates`
+2. Select any template (built-in or custom)
+3. Click "Duplicate to edit roles" button
+
+This creates a copy with:
+
+- Original name + " Copy"
+- Same roles and role groups
+- Same emoji and color
+- Enabled by default
+
+<Tip>
+  Duplicate a built-in template to create a variant with modified roles. For example, duplicate "Void" to create "Void (8-man)" with fewer slots.
+</Tip>
+
+### Editing Custom Template Roles
+
+Customize roles and positions (custom templates only):
+
+1. Run `/templates`
+2. Select a custom template
+3. Click "Edit roles" button
+4. Enter role configuration in the modal (commands/templates.js:286-289):
+
+```
+Group|Emoji|Role|Slots|Icon
+```
+
+**Format:**
+
+- **Group:** Role group name (e.g., "Vanguard", "Support")
+- **Emoji:** Reaction emoji for this role (e.g., "1️⃣", "⚔️")
+- **Role:** Display name (e.g., "Storm 1", "Jade")
+- **Slots:** Number of positions (integer > 0)
+- **Icon:** Optional custom emoji/icon
+
+<CodeGroup>
+```
+Vanguard|1️⃣|Storm 1|1|<:Storm:123456789>
+Vanguard|2️⃣|Fire 1|1|<:Fire:123456790>
+Support|3️⃣|Jade|2|<:Life:123456791>
+Support|4️⃣|Backup|1
+```
+
+```
+DPS|⚔️|Hitter 1|1
+DPS|⚡|Hitter 2|1
+Support|🛡️|Jade|1
+Support|💚|Backup Jade|1
+```
+</CodeGroup>
+
+<Note>
+  Each line defines one role. Use `|` (pipe) as the delimiter. Icon is optional (commands/templates.js:415).
+</Note>
+
+### Deleting Custom Templates
+
+1. Run `/templates`
+2. Select a custom template
+3. Click "Delete" button
+
+<Warning>
+  Deletion is permanent. Built-in templates cannot be deleted, only disabled.
+</Warning>
+
+## Template Data Structure
+
+Templates are stored in two locations:
+
+### Built-in Templates
+
+Defined in `raid_templates.json` (templates.js:6):
+
+```json
+{
+  "id": "void",
+  "name": "Voracious Void",
+  "slug": "void",
+  "emoji": "🌀",
+  "color": "#9b59b6",
+  "description": "Dragonspyre raid",
+  "roleGroups": [
+    {
+      "name": "Vanguard",
+      "emoji": "1️⃣",
+      "roles": [
+        {
+          "emoji": "1️⃣",
+          "icon": "<:Storm:...>",
+          "name": "Storm 1",
+          "slots": 1
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Custom Templates
+
+Stored in the database (templatesManager.js:26-41):
+
+- **Table:** `custom_templates`
+- **Fields:** `id`, `guild_id`, `name`, `emoji`, `description`, `color`, `role_groups`
+- **Scope:** Per-guild (each server has independent custom templates)
+
+### Template Overrides
+
+Per-guild overrides for built-in templates (templatesManager.js:12-24):
+
+- **Table:** `template_overrides`
+- **Fields:** `guild_id`, `template_id`, `name`, `emoji`, `description`, `color`, `disabled`
+- **Scope:** Per-guild
+
+## Template Selection
+
+When creating a raid with `/create`, only enabled templates appear in the dropdown.
+
+Template display order:
+
+1. Built-in templates (if enabled)
+2. Custom templates (if enabled)
+3. Sorted alphabetically by display name
+
+## Template Loading
+
+Templates are loaded per-guild with overrides applied (templatesManager.js:56-88):
+
+1. Load built-in templates from JSON
+2. Apply guild-specific overrides (name, emoji, color, disabled)
+3. Load guild custom templates from database
+4. Merge and return complete template list
+
+<Note>
+  Template changes take effect immediately. No bot restart required.
+</Note>
+
+## Role Groups
+
+Templates organize roles into groups:
+
+```json
+"roleGroups": [
+  {
+    "name": "Vanguard",
+    "emoji": "1️⃣",
+    "roles": [
+      { "emoji": "1️⃣", "name": "Storm 1", "slots": 1, "icon": "<:Storm:...>" },
+      { "emoji": "2️⃣", "name": "Fire 1", "slots": 1, "icon": "<:Fire:...>" }
+    ]
+  },
+  {
+    "name": "Support",
+    "emoji": "3️⃣",
+    "roles": [
+      { "emoji": "3️⃣", "name": "Jade", "slots": 2, "icon": "<:Life:...>" }
+    ]
+  }
+]
+```
+
+Role groups provide visual organization in signup embeds.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Descriptive Names" icon="tag">
+    Use clear template names like "Void (8-man)" instead of generic names.
+  </Card>
+  <Card title="Consistent Emojis" icon="icons">
+    Use consistent emoji patterns across templates for user familiarity.
+  </Card>
+  <Card title="Disable Unused" icon="ban">
+    Disable templates you don't use to keep the `/create` menu clean.
+  </Card>
+  <Card title="Test Custom Templates" icon="flask">
+    Create a test raid with new custom templates before using in production.
+  </Card>
+  <Card title="Backup Custom Templates" icon="floppy-disk">
+    Export template configurations before making major changes.
+  </Card>
+  <Card title="Use Groups Wisely" icon="layer-group">
+    Group similar roles together (e.g., "DPS", "Support", "Utility").
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Template not appearing in /create">
+    1. Check if template is enabled
+    2. Verify you have permission to create raids
+    3. Ensure template has at least one role defined
+  </Accordion>
+
+  <Accordion title="Role editing fails for built-in template">
+    Built-in templates are read-only. Duplicate the template first, then edit the custom copy.
+  </Accordion>
+
+  <Accordion title="Invalid role format error">
+    Ensure each role line follows the format:
+    ```
+    Group|Emoji|Role|Slots|Icon(optional)
+    ```
+    Common issues:
+    - Missing pipe delimiters
+    - Non-numeric slots value
+    - Empty group/emoji/role name
+  </Accordion>
+
+  <Accordion title="Custom template disappeared">
+    1. Check if it was accidentally deleted
+    2. Verify database integrity
+    3. Check if template is disabled (not deleted)
+  </Accordion>
+</AccordionGroup>

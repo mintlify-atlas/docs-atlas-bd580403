@@ -1,0 +1,196 @@
+---
+title: /recurring
+description: Manage recurring raid schedules for automatic signup creation
+---
+
+The `/recurring` command allows you to set up automatic raid schedules that spawn signup posts at regular intervals.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/recurring action:<create|list|edit|delete|toggle|trigger> [id:<id>]
+```
+
+<ParamField path="action" type="choice" required>
+  What operation to perform:
+  - `create` - Set up a new recurring schedule
+  - `list` - View all recurring schedules
+  - `edit` - Modify an existing schedule
+  - `delete` - Remove a schedule permanently
+  - `toggle` - Enable or disable a schedule
+  - `trigger` - Manually spawn a raid from a schedule
+</ParamField>
+
+<ParamField path="id" type="string">
+  Schedule ID (required for edit, delete, toggle, trigger)
+</ParamField>
+
+## Creating a Recurring Raid
+
+The create flow guides you through 7 steps:
+
+### Step 1: Select Template
+
+Choose the raid type:
+- Raid templates (Dragonspyre, Lemuria, Polaris, etc.)
+- Museum Signup
+
+### Step 2: Schedule Type
+
+Select how often raids spawn:
+- **Weekly** - Same day each week (e.g., every Saturday)
+- **Daily** - Every day at the same time
+- **Custom Interval** - Every N hours (e.g., every 24 hours)
+
+### Step 3: Schedule Details
+
+**For Weekly:**
+- Select day of week (Monday-Sunday)
+- Enter time of day (e.g., "7pm")
+
+**For Daily:**
+- Enter time of day (e.g., "6pm")
+
+**For Custom Interval:**
+- Enter hours between raids (e.g., 24)
+
+### Step 4: Timezone
+
+Enter the timezone for the schedule:
+```
+America/New_York
+America/Chicago
+Europe/London
+UTC-5
+EST
+```
+
+### Step 5: Spawn Schedule (Optional)
+
+Choose when the signup appears:
+- **At raid time** - Signup posts when raid starts
+- **Custom time** - Specify a different day/time for signup to appear (e.g., post 24 hours before)
+
+For custom:
+- Enter spawn day (e.g., "Monday")
+- Enter spawn time (e.g., "10am")
+
+### Step 6: Copy Participants
+
+Choose whether to pre-register participants from the previous instance:
+- **Yes** - Copy signups from last raid to new one
+- **No** - Start with empty signups each time
+
+### Step 7: Role Mention (Optional)
+
+Optionally ping a role when signups appear:
+- **Yes** - Enter role ID to mention
+- **No** - No role mention
+
+## Managing Schedules
+
+### List Schedules
+
+```
+/recurring action:list
+```
+
+Shows all recurring schedules with:
+- Status (🟢 enabled, 🔴 disabled)
+- Template name
+- Schedule description
+- Next spawn time
+
+### Toggle Schedule
+
+```
+/recurring action:toggle id:ABC123
+```
+
+Enables or disables the schedule without deleting it.
+
+### Delete Schedule
+
+```
+/recurring action:delete id:ABC123
+```
+
+Permanently removes the recurring schedule.
+
+### Trigger Manually
+
+```
+/recurring action:trigger id:ABC123
+```
+
+Immediately spawns a raid from the recurring schedule, bypassing the normal timing.
+
+### Edit Schedule
+
+```
+/recurring action:edit id:ABC123
+```
+
+Opens an edit menu to modify:
+- **Raid Time** - Change when the raid occurs
+- **Spawn Time** - Change when signup appears
+- **Role Mention** - Add/change/remove role mention
+
+## Examples
+
+<CodeGroup>
+```text Weekly Saturday Raid
+/recurring action:create
+→ Template: Dragonspyre (Voracious Void)
+→ Schedule: Weekly
+→ Day: Saturday
+→ Time: 7pm
+→ Timezone: America/New_York
+→ Spawn: At raid time
+→ Copy Participants: No
+→ Role Mention: No
+```
+
+```text Daily Museum with 24h Advance
+/recurring action:create
+→ Template: Museum Signup
+→ Schedule: Weekly
+→ Day: Friday
+→ Time: 8pm
+→ Timezone: EST
+→ Spawn: Custom time
+→ Spawn Day: Thursday
+→ Spawn Time: 8pm
+→ Copy Participants: Yes
+→ Role Mention: Yes → 123456789
+```
+
+```text Every 24 Hours
+/recurring action:create
+→ Template: Polaris (Cabal's Revenge)
+→ Schedule: Custom Interval
+→ Hours: 24
+→ Copy Participants: No
+```
+</CodeGroup>
+
+## Schedule Description Format
+
+When you list schedules, they're described as:
+- "Every Saturday at 7:00 PM EST"
+- "Daily at 6:00 PM PST"
+- "Every 24 hours"
+
+<Note>
+If a spawn time is set, the description includes: "Signup posts Thursday at 8:00 PM EST"
+</Note>
+
+## Related Commands
+
+- [/create](/commands/create) - Create one-time raids
+- [/raid](/commands/raid) - Manage spawned raids
+- [/settings](/commands/settings) - Configure default timezone

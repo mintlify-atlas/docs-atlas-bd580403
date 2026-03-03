@@ -1,0 +1,402 @@
+---
+title: Database Architecture
+description: Deep dive into RaidBot's SQLite database structure, migrations, and performance optimizations
+---
+
+## Overview
+
+RaidBot uses **SQLite** with the `better-sqlite3` library for fast, synchronous database operations. The database stores all guild configurations, active raids, signups, user statistics, and more.
+
+<Info>
+The database file is located at `data/wizbot.db`. In test mode, an in-memory database is used to avoid file locking issues.
+</Info>
+
+## Database Configuration
+
+### Connection Setup
+
+The database connection is configured with performance optimizations:
+
+```javascript
+const Database = require('better-sqlite3');
+const db = new Database(DB_PATH);
+
+// Enable WAL mode for better concurrent performance
+db.pragma('journal_mode = WAL');
+
+// Enable foreign key enforcement
+db.pragma('foreign_keys = ON');
+```
+
+**Key Features:**
+- **WAL Mode**: Write-Ahead Logging improves concurrent read/write performance
+- **Foreign Keys**: Ensures referential integrity across tables
+- **Synchronous API**: No callback hell - operations complete immediately
+
+### Environment Detection
+
+The database automatically detects test mode and switches to in-memory storage:
+
+```javascript
+const isTestMode = process.env.NODE_ENV === 'test' ||
+    process.env.ACTIVE_RAIDS_FILE?.includes('test') ||
+    process.argv.some(arg => arg.includes('node:test') || arg.includes('--test'));
+
+const DB_PATH = isTestMode ? ':memory:' : path.join(DATA_DIR, 'wizbot.db');
+```
+
+## Schema Overview
+
+The database consists of 15+ tables organized by functionality:
+
+### Core Tables
+
+<CardGroup cols={2}>
+  <Card title="guilds" icon="server">
+    Stores per-guild configuration including channel IDs, reminder settings, and timezone preferences
+  </Card>
+  <Card title="raids" icon="calendar">
+    Active raid posts with metadata, timestamps, templates, and closure information
+  </Card>
+  <Card title="signups" icon="users">
+    Normalized signup data with role assignments, waitlist status, and side assignments
+  </Card>
+  <Card title="raid_attendance" icon="check">
+    Tracks attendance and no-shows for completed raids
+  </Card>
+</CardGroup>
+
+### Statistics Tables
+
+```sql
+-- Global user statistics
+CREATE TABLE user_stats (
+  user_id TEXT PRIMARY KEY,
+  total_raids INTEGER DEFAULT 0,
+  no_shows INTEGER DEFAULT 0,
+  role_counts TEXT,        -- JSON object
+  template_counts TEXT,    -- JSON object
+  weekday_counts TEXT,     -- JSON object
+  last_updated INTEGER,
+  last_raid_at INTEGER
+);
+
+-- Per-guild user statistics
+CREATE TABLE guild_user_stats (
+  guild_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  total_raids INTEGER DEFAULT 0,
+  no_shows INTEGER DEFAULT 0,
+  role_counts TEXT,
+  template_counts TEXT,
+  weekday_counts TEXT,
+  last_updated INTEGER,
+  last_raid_at INTEGER,
+  PRIMARY KEY (guild_id, user_id)
+);
+```
+
+### Permission Tables
+
+```sql
+-- Admin roles per guild
+CREATE TABLE admin_roles (
+  guild_id TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, role_id)
+);
+
+-- Command-specific permissions
+CREATE TABLE command_permissions (
+  guild_id TEXT NOT NULL,
+  command_name TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, command_name, role_id)
+);
+
+-- Required roles to sign up
+CREATE TABLE signup_roles (
+  guild_id TEXT NOT NULL,
+  role_id TEXT NOT NULL,
+  PRIMARY KEY (guild_id, role_id)
+);
+```
+
+## Performance Optimizations
+
+### Indexes
+
+Strategic indexes ensure fast query performance:
+
+```sql
+-- Common query patterns
+CREATE INDEX idx_raids_guild ON raids(guild_id);
+CREATE INDEX idx_raids_timestamp ON raids(timestamp);
+CREATE INDEX idx_signups_message ON signups(message_id);
+CREATE INDEX idx_signups_user ON signups(user_id);
+
+-- Composite indexes for complex queries
+CREATE INDEX idx_raids_guild_closed ON raids(guild_id, closed_at);
+CREATE INDEX idx_recurring_enabled_next ON recurring_raids(enabled, next_scheduled_at);
+CREATE INDEX idx_signups_message_user ON signups(message_id, user_id);
+```
+
+<Note>
+Indexes significantly speed up queries but increase write overhead. These indexes are optimized for RaidBot's most common query patterns.
+</Note>
+
+### Prepared Statements
+
+All database operations use prepared statements for performance and security:
+
+```javascript
+function prepare(sql) {
+    return db.prepare(sql);
+}
+
+// Example usage
+const getRaid = prepare('SELECT * FROM raids WHERE message_id = ?');
+const raid = getRaid.get(messageId);
+```
+
+### Transactions
+
+Complex operations are wrapped in transactions for atomicity and performance:
+
+```javascript
+function transaction(fn) {
+    return db.transaction(fn);
+}
+
+// Example: Bulk signup insert
+const insertSignups = transaction((signups) => {
+    const insert = prepare(
+        'INSERT INTO signups (message_id, user_id, role_name) VALUES (?, ?, ?)'
+    );
+    for (const signup of signups) {
+        insert.run(signup.messageId, signup.userId, signup.roleName);
+    }
+});
+```
+
+## Automatic Migrations
+
+### Migration System
+
+The database automatically applies migrations on startup:
+
+```javascript
+function runMigrations() {
+    const migrations = [
+        // Threads support (added Dec 2024)
+        { 
+            table: 'guilds', 
+            column: 'threads_enabled', 
+            sql: 'ALTER TABLE guilds ADD COLUMN threads_enabled INTEGER DEFAULT 0' 
+        },
+        // Optimistic locking (added Dec 2024)
+        { 
+            table: 'raids', 
+            column: 'version', 
+            sql: 'ALTER TABLE raids ADD COLUMN version INTEGER DEFAULT 1' 
+        },
+        // No-show tracking (added Jan 2025)
+        { 
+            table: 'guild_user_stats', 
+            column: 'no_shows', 
+            sql: 'ALTER TABLE guild_user_stats ADD COLUMN no_shows INTEGER DEFAULT 0' 
+        },
+        // Challenge Mode (added Feb 2026)
+        { 
+            table: 'guilds', 
+            column: 'challenge_channel_id', 
+            sql: 'ALTER TABLE guilds ADD COLUMN challenge_channel_id TEXT' 
+        }
+    ];
+
+    for (const migration of migrations) {
+        if (!columnExists(migration.table, migration.column)) {
+            try {
+                db.exec(migration.sql);
+                console.log(`Migration: Added ${migration.column} to ${migration.table}`);
+            } catch (error) {
+                console.error(`Migration failed for ${migration.column}:`, error.message);
+                throw new Error(`Critical migration failed: ${migration.column}`);
+            }
+        }
+    }
+}
+```
+
+<Warning>
+Migration failures are treated as critical errors that prevent bot startup. This ensures database integrity.
+</Warning>
+
+### Column Existence Check
+
+Migrations check for existing columns before attempting to add them:
+
+```javascript
+function columnExists(table, column) {
+    const result = db.prepare(`PRAGMA table_info(${table})`).all();
+    return result.some(row => row.name === column);
+}
+```
+
+## Database Utilities
+
+### Statistics Query
+
+Get database size and record counts:
+
+```javascript
+function getStats() {
+    return {
+        guilds: db.prepare('SELECT COUNT(*) as count FROM guilds').get().count,
+        raids: db.prepare('SELECT COUNT(*) as count FROM raids').get().count,
+        signups: db.prepare('SELECT COUNT(*) as count FROM signups').get().count,
+        userStats: db.prepare('SELECT COUNT(*) as count FROM user_stats').get().count,
+        guildUserStats: db.prepare('SELECT COUNT(*) as count FROM guild_user_stats').get().count
+    };
+}
+```
+
+### Migration Status Check
+
+```javascript
+function hasMigrated() {
+    const result = db.prepare('SELECT COUNT(*) as count FROM guilds').get();
+    return result.count > 0;
+}
+```
+
+## Advanced Features
+
+### Optimistic Locking
+
+The `raids` table includes a `version` column for optimistic concurrency control:
+
+```sql
+CREATE TABLE raids (
+  message_id TEXT PRIMARY KEY,
+  -- ... other columns ...
+  version INTEGER DEFAULT 1
+);
+```
+
+This prevents race conditions when multiple processes update the same raid simultaneously.
+
+### Cascade Deletes
+
+Foreign keys are configured with `ON DELETE CASCADE` to automatically clean up related data:
+
+```sql
+CREATE TABLE signups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id TEXT NOT NULL,
+  -- ... other columns ...
+  FOREIGN KEY (message_id) REFERENCES raids(message_id) ON DELETE CASCADE
+);
+```
+
+When a raid is deleted, all associated signups are automatically removed.
+
+### JSON Column Storage
+
+Complex data structures are stored as JSON in TEXT columns:
+
+```javascript
+// Storing complex template data
+const templateData = {
+    slug: 'dragonspyre',
+    customRoles: [...],
+    settings: {...}
+};
+
+db.prepare('INSERT INTO raids (message_id, template_data) VALUES (?, ?)').run(
+    messageId,
+    JSON.stringify(templateData)
+);
+
+// Retrieving and parsing
+const raid = db.prepare('SELECT template_data FROM raids WHERE message_id = ?').get(messageId);
+const template = JSON.parse(raid.template_data);
+```
+
+## Troubleshooting
+
+### Database Locked
+
+**Problem:** `database is locked` error
+
+**Solution:** WAL mode should prevent this, but if it occurs:
+
+```bash
+# Close all connections
+pkill -f wizbot
+
+# Check for stale locks
+lsof data/wizbot.db
+
+# Remove WAL files if safe
+rm data/wizbot.db-shm data/wizbot.db-wal
+```
+
+### Corruption Detection
+
+Check database integrity:
+
+```bash
+sqlite3 data/wizbot.db "PRAGMA integrity_check;"
+```
+
+### Performance Issues
+
+Analyze query performance:
+
+```javascript
+// Enable query logging
+db.prepare('PRAGMA case_sensitive_like = ON').run();
+
+// Analyze query plan
+const plan = db.prepare('EXPLAIN QUERY PLAN SELECT * FROM raids WHERE guild_id = ?').all(guildId);
+console.log(plan);
+```
+
+### Backup and Recovery
+
+**Create backup:**
+
+```bash
+sqlite3 data/wizbot.db ".backup data/wizbot_backup.db"
+```
+
+**Restore from backup:**
+
+```bash
+cp data/wizbot_backup.db data/wizbot.db
+```
+
+<Warning>
+Always stop the bot before manually modifying the database file to prevent corruption.
+</Warning>
+
+## Best Practices
+
+1. **Always use transactions** for multi-step operations
+2. **Prepare statements once** and reuse them
+3. **Use indexes** for frequently queried columns
+4. **Store complex data as JSON** when appropriate
+5. **Test migrations** with a backup database first
+6. **Monitor database size** - vacuum periodically if needed
+
+```bash
+# Vacuum to reclaim space and optimize
+sqlite3 data/wizbot.db "VACUUM;"
+```
+
+## See Also
+
+- [Migration Guide](/advanced/migration) - Migrating from JSON to SQLite
+- [Monitoring](/advanced/monitoring) - Database performance metrics
+- [Configuration](/configuration/setup) - Database-related settings

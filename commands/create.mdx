@@ -1,0 +1,157 @@
+---
+title: /create
+description: Interactive creation flow for raids and museum signups
+---
+
+The `/create` command provides an interactive flow to create raid signups, museum signups, gold key boss runs, and challenge mode events.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/create
+```
+
+## Overview
+
+The `/create` command launches an interactive menu system that guides you through:
+
+1. **Selecting activity type** - Choose from available raid templates, museum signup, gold key boss, or challenge mode
+2. **Setting the time** - Enter a natural language time (e.g., "tomorrow 7pm") or Unix timestamp
+3. **Configuring options** - Set length (for raids), strategy (for Dragonspyre), teams (for keys/challenges), etc.
+4. **Creating the signup** - Bot posts the signup message with reactions in the configured channel
+
+## Activity Types
+
+<Tabs>
+  <Tab title="Raid Templates">
+    Standard raid templates include:
+    - **Dragonspyre** (Voracious Void) - Requires length (1.5 or 3 hours) and strategy (triple storm or 2 myth 1 storm)
+    - **Lemuria** (Ghastly Conspiracy) - Requires length (1.5 or 3 hours)
+    - **Polaris** (Cabal's Revenge) - Requires length (1.5 or 3 hours)
+    
+    Raid templates are configurable via [/templates](/commands/templates).
+  </Tab>
+  <Tab title="Museum Signup">
+    Creates a museum signup with:
+    - Max 12 player slots
+    - Single ✅ reaction for signup
+    - Automatic waitlist management
+  </Tab>
+  <Tab title="Gold Key Boss">
+    Creates a gold key boss signup with:
+    - 1-4 teams (4 players each)
+    - Numbered reactions (1️⃣, 2️⃣, 3️⃣, 4️⃣) for team selection
+    - Optional boss name
+    - Toggle for participation tracking
+  </Tab>
+  <Tab title="Challenge Mode">
+    Creates a challenge mode signup with:
+    - 1-4 teams (4 players each)
+    - Numbered reactions for team selection
+    - Optional dungeon name
+    - Toggle for participation tracking
+  </Tab>
+</Tabs>
+
+## Time Formats
+
+The bot accepts various time formats:
+
+```
+tomorrow 7pm
+next Friday 6:30pm
+Saturday 8pm EST
+1234567890 (Unix timestamp)
+```
+
+<Note>
+The bot uses the server's default timezone (configured in [/settings](/commands/settings)) to parse natural language times.
+</Note>
+
+## Interactive Flow
+
+### Step 1: Select Type
+
+A dropdown menu shows all enabled raid templates plus special activity types:
+
+```
+Raid Templates:
+- Dragonspyre (Voracious Void)
+- Lemuria (Ghastly Conspiracy)
+- Polaris (Cabal's Revenge)
+
+Special:
+- Museum Signup
+- Gold Key Boss
+- Challenge Mode
+```
+
+### Step 2: Configure Options
+
+Depending on the selected type, you'll see:
+
+**For Raids:**
+- Length dropdown (1.5 hours or 3 hours)
+- Strategy dropdown (Dragonspyre only)
+
+**For Gold Key Boss / Challenge Mode:**
+- Team count dropdown (1-4 teams)
+- Boss/dungeon name button (opens modal)
+- Participation toggle (whether it counts toward weekly stats)
+
+### Step 3: Set Time
+
+Click "Set date/time" to open a modal where you enter the raid time.
+
+### Step 4: Create
+
+Once all required fields are filled, the "Create" button becomes enabled. Click it to post the signup.
+
+## Result
+
+The bot:
+1. Posts the signup message in the configured channel
+2. Adds all reaction options
+3. Creates a discussion thread (if threads are enabled)
+4. Confirms creation with a link to the signup
+
+## Examples
+
+<CodeGroup>
+```text Example 1: Dragonspyre Raid
+/create
+→ Type: Dragonspyre (Voracious Void)
+→ Length: 3 hours
+→ Strategy: triple storm
+→ Time: tomorrow 7pm
+→ Create
+```
+
+```text Example 2: Museum Signup
+/create
+→ Type: Museum Signup
+→ Time: Saturday 2pm
+→ Create
+```
+
+```text Example 3: Gold Key Boss
+/create
+→ Type: Gold Key Boss
+→ Teams: 2 Teams (8 slots)
+→ Boss name: Rattlebones
+→ Participation: Yes ✅
+→ Time: next Friday 8pm
+→ Create
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/raid](/commands/raid) - Manage created raids
+- [/setchannel](/commands/setchannel) - Configure where signups are posted
+- [/templates](/commands/templates) - Manage raid templates
+- [/recurring](/commands/recurring) - Create automatic recurring raids

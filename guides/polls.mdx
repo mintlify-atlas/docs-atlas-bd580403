@@ -1,0 +1,627 @@
+---
+title: Polls
+description: Create time slot polls to find the best raid times based on member availability and voting
+---
+
+Polls help you find optimal raid times by letting members vote on their preferred time slots. RaidBot's polling system uses reactions and tracks results in real-time.
+
+## Why Use Polls?
+
+Polls are perfect when:
+
+<CardGroup cols={2}>
+  <Card title="Scheduling recurring raids" icon="repeat">
+    Find the best weekly time that works for most members
+  </Card>
+  <Card title="New raid series" icon="sparkles">
+    Gauge interest and availability before committing to a schedule
+  </Card>
+  <Card title="One-time events" icon="calendar-star">
+    Schedule special events at times when attendance will be highest
+  </Card>
+  <Card title="Timezone conflicts" icon="globe">
+    Balance preferences across members in different timezones
+  </Card>
+</CardGroup>
+
+## Creating a Poll
+
+<Steps>
+  <Step title="Run the poll create command">
+    ```bash
+    /poll create title:"Weekly Raid Time" options:"Sat 7pm, Sat 8pm, Sun 3pm" duration:72
+    ```
+
+    **Parameters:**
+    - `title`: Poll title (e.g., "Weekly Dragonspyre Time")
+    - `options`: Comma-separated time slots (2-10 options)
+    - `duration`: Hours until auto-close (optional, 0 = manual close only)
+
+    <Note>
+      Polls require the **Manage Server** permission to create.
+    </Note>
+  </Step>
+
+  <Step title="Poll message posted">
+    RaidBot posts an embed in the current channel with:
+    - Poll title
+    - All time slot options
+    - Numbered reaction emojis (1️⃣, 2️⃣, 3️⃣, etc.)
+    - Poll ID for management
+    - Expiration time (if set)
+
+    Example:
+    ```
+    📊 Weekly Raid Time
+
+    React with a number to vote for your preferred time(s)!
+
+    1️⃣ Sat 7pm
+    2️⃣ Sat 8pm
+    3️⃣ Sun 3pm
+
+    Poll ID: POLL123 • Closes: in 3 days
+    ```
+  </Step>
+
+  <Step title="Members vote">
+    Members react with number emojis to vote.
+
+    <Info>
+      Members can vote for **multiple options** by reacting to multiple numbers. This helps identify overlapping availability.
+    </Info>
+  </Step>
+</Steps>
+
+## Poll Options Format
+
+Options are separated by commas (or semicolons):
+
+<Tabs>
+  <Tab title="Simple Times">
+    ```
+    options:"Sat 7pm, Sat 8pm, Sun 3pm"
+    ```
+
+    Clear, concise time slots.
+  </Tab>
+
+  <Tab title="With Timezones">
+    ```
+    options:"Sat 7pm EST, Sat 8pm EST, Sun 3pm EST"
+    ```
+
+    Include timezone for international servers.
+  </Tab>
+
+  <Tab title="Detailed Options">
+    ```
+    options:"Saturday 7:00pm (East Coast), Saturday 4:00pm (West Coast), Sunday 3:00pm (All zones)"
+    ```
+
+    Provide context for each option.
+  </Tab>
+
+  <Tab title="Date-Specific">
+    ```
+    options:"March 15 at 7pm, March 16 at 7pm, March 17 at 7pm"
+    ```
+
+    For one-time events or specific dates.
+  </Tab>
+</Tabs>
+
+<Warning>
+  - **Minimum**: 2 options
+  - **Maximum**: 10 options
+  - Going outside these limits will result in an error
+</Warning>
+
+## Managing Polls
+
+### List Polls
+
+View recent polls in your server:
+
+```bash
+/poll list
+```
+
+Shows:
+- Poll title and ID
+- Status (Open ✅ / Closed 🔒)
+- When it was created
+- Jump link to the poll message
+
+Example output:
+```
+📊 Recent Polls
+
+Weekly Raid Time (ID: POLL123)
+✅ Open • Created 2 days ago • [Jump](link)
+
+Special Event Time (ID: POLL456)
+🔒 Closed • Created 5 days ago • [Jump](link)
+```
+
+### View Results
+
+Check current voting breakdown:
+
+```bash
+/poll results id:POLL123
+```
+
+Shows:
+- Vote count for each option
+- Progress bars visualizing votes
+- Total voter count
+- List of voters for each option (up to 10 shown)
+- Top 3 choices highlighted
+
+Example:
+```
+📊 Weekly Raid Time
+
+1️⃣ Sat 7pm — 8 votes ████████░░
+   └ @Player1, @Player2, @Player3 +5 more
+
+2️⃣ Sat 8pm — 12 votes ████████████
+   └ @Player4, @Player5, @Player6 +9 more
+
+3️⃣ Sun 3pm — 5 votes █████░░░░░
+   └ @Player7, @Player8, @Player9 +2 more
+
+Total Voters: 15
+
+🏆 Top Choices:
+🥇 Sat 8pm (12 votes)
+🥈 Sat 7pm (8 votes)
+🥉 Sun 3pm (5 votes)
+```
+
+<Tip>
+  Use `/poll results` during an active poll to see which option is winning and encourage more participation!
+</Tip>
+
+### Close Poll
+
+Manually close a poll and show final results:
+
+```bash
+/poll close id:POLL123
+```
+
+When closed:
+1. Poll embed updates to show "Poll Closed — Final Results"
+2. Final vote counts displayed
+3. Optimal time slots highlighted
+4. Public announcement posted with results
+
+Example announcement:
+```
+📊 Poll Closed: Weekly Raid Time
+
+🏆 Optimal Time Slots:
+🥇 Sat 8pm — 12 votes
+🥈 Sat 7pm — 8 votes
+🥉 Sun 3pm — 5 votes
+
+Poll ID: POLL123 • Total voters: 15
+```
+
+<Info>
+  Polls with a `duration` set will auto-close when the time expires. Manual closure is only needed for polls without a duration or to close early.
+</Info>
+
+### Delete Poll
+
+Remove a poll and its message:
+
+```bash
+/poll delete id:POLL123
+```
+
+This:
+- Deletes the poll message from the channel
+- Removes the poll from the database
+- Cannot be undone
+
+<Warning>
+  Deletion is permanent. Consider closing the poll instead of deleting to preserve historical voting data.
+</Warning>
+
+## Auto-Close Duration
+
+Set how long a poll stays open:
+
+<Tabs>
+  <Tab title="No Auto-Close">
+    ```bash
+    /poll create ... duration:0
+    ```
+
+    Poll stays open indefinitely until manually closed.
+
+    Best for:
+    - Ongoing preference tracking
+    - Polls you'll close after enough votes
+  </Tab>
+
+  <Tab title="24 Hours">
+    ```bash
+    /poll create ... duration:24
+    ```
+
+    Poll closes after 24 hours.
+
+    Best for:
+    - Quick scheduling decisions
+    - Same-day or next-day events
+  </Tab>
+
+  <Tab title="3 Days (72 hours)">
+    ```bash
+    /poll create ... duration:72
+    ```
+
+    Poll closes after 3 days.
+
+    Best for:
+    - Weekly raid scheduling
+    - Giving all members time to vote
+    - International servers (covers all timezones)
+  </Tab>
+
+  <Tab title="1 Week (168 hours)">
+    ```bash
+    /poll create ... duration:168
+    ```
+
+    Poll closes after 1 week (maximum).
+
+    Best for:
+    - Long-term planning
+    - Monthly event scheduling
+    - Collecting broad feedback
+  </Tab>
+</Tabs>
+
+<Note>
+  Duration is in **hours**. Maximum allowed is 168 hours (1 week).
+</Note>
+
+## Voting Behavior
+
+### Multiple Votes Allowed
+
+Members can vote for multiple time slots:
+
+```
+Player reacts to: 1️⃣, 2️⃣, and 3️⃣
+= "I'm available for all three options!"
+```
+
+This helps identify:
+- Which times have the most overlap
+- Backup options if the top choice doesn't work
+- Member flexibility
+
+### Changing Votes
+
+Members can change votes by:
+- Removing a reaction (unvote that option)
+- Adding a new reaction (vote for that option)
+- Adding/removing multiple reactions (adjust preferences)
+
+Votes update in real-time as reactions change.
+
+### Vote Tracking
+
+The system tracks:
+- **Total unique voters**: How many members participated
+- **Votes per option**: How many votes each time slot received
+- **Voter lists**: Who voted for each option (up to 25 tracked)
+
+<Info>
+  A member who votes for 3 options counts as:
+  - 1 total voter
+  - 3 votes (one for each option)
+</Info>
+
+## Finding Optimal Times
+
+When a poll closes, RaidBot identifies optimal time slots:
+
+<Steps>
+  <Step title="Votes counted">
+    All reactions are tallied for each option.
+  </Step>
+
+  <Step title="Options sorted">
+    Time slots are ranked by vote count (most votes first).
+  </Step>
+
+  <Step title="Top 3 highlighted">
+    The top 3 options are shown with medal emojis:
+    - 🥇 Most votes
+    - 🥈 Second most
+    - 🥉 Third most
+  </Step>
+
+  <Step title="Results posted">
+    A public message announces the optimal times.
+  </Step>
+</Steps>
+
+Example logic:
+```
+Option A: 12 votes → 🥇 Best time
+Option B: 8 votes  → 🥈 Backup time
+Option C: 5 votes  → 🥉 Third option
+Option D: 2 votes  → Not recommended
+```
+
+<Tip>
+  Use the winning time to create your raid with `/create`, or consider the top 2-3 options for recurring events with rotating times.
+</Tip>
+
+## Use Cases
+
+<Tabs>
+  <Tab title="Weekly Raid Time">
+    **Scenario**: Establishing a permanent weekly raid schedule
+
+    <Steps>
+      <Step title="Create poll">
+        ```bash
+        /poll create title:"Best time for weekly Dragonspyre?"
+        options:"Saturdays 7pm EST, Saturdays 8pm EST, Sundays 3pm EST, Sundays 5pm EST"
+        duration:72
+        ```
+      </Step>
+
+      <Step title="Wait for votes">
+        Let members vote over 3 days to ensure everyone participates.
+      </Step>
+
+      <Step title="Poll auto-closes">
+        After 72 hours, results are posted automatically.
+      </Step>
+
+      <Step title="Schedule raids">
+        Use the winning time for your weekly raids going forward.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Special Event">
+    **Scenario**: One-time event with flexible date
+
+    <Steps>
+      <Step title="Create poll">
+        ```bash
+        /poll create title:"Best time for guild anniversary raid?"
+        options:"March 15 at 7pm, March 16 at 7pm, March 17 at 2pm, March 17 at 7pm"
+        duration:168
+        ```
+      </Step>
+
+      <Step title="Gather votes">
+        Give members a full week to vote since it's a special event.
+      </Step>
+
+      <Step title="Close and announce">
+        ```bash
+        /poll close id:POLL123
+        ```
+        Results show which date works best.
+      </Step>
+
+      <Step title="Create the raid">
+        ```bash
+        /create
+        # Use winning date/time from poll
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Trial Period">
+    **Scenario**: Testing different times to see what works
+
+    <Steps>
+      <Step title="Create initial poll">
+        ```bash
+        /poll create title:"Trial raid time options"
+        options:"6pm, 7pm, 8pm, 9pm"
+        duration:0
+        ```
+      </Step>
+
+      <Step title="Keep open indefinitely">
+        Let members vote over several weeks.
+      </Step>
+
+      <Step title="Check results periodically">
+        ```bash
+        /poll results id:POLL123
+        ```
+      </Step>
+
+      <Step title="Close when confident">
+        After enough data:
+        ```bash
+        /poll close id:POLL123
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Timezone Balancing">
+    **Scenario**: Server with US East and West Coast members
+
+    <Steps>
+      <Step title="Create poll with multiple zones">
+        ```bash
+        /poll create title:"Best raid time (multiple zones)"
+        options:"7pm EST (4pm PST), 8pm EST (5pm PST), 9pm EST (6pm PST)"
+        duration:72
+        ```
+      </Step>
+
+      <Step title="Voters see their local time">
+        Members from both coasts can assess which works for them.
+      </Step>
+
+      <Step title="Results show compromise">
+        The winning option balances both timezones.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Include context in poll title">
+    Be specific about what the poll is for:
+
+    ✅ "Best time for weekly Dragonspyre raid"
+    ✅ "Preferred time for Saturday museum runs"
+    ❌ "Vote for time"
+    ❌ "Poll"
+
+    Clear titles increase participation.
+  </Accordion>
+
+  <Accordion title="Provide 3-5 options">
+    - Too few (2): Limits choice
+    - Too many (10): Overwhelming and splits votes
+    - Just right (3-5): Balanced and clear
+
+    Example:
+    ```
+    options:"Sat 6pm, Sat 7pm, Sat 8pm, Sun 3pm"
+    ```
+  </Accordion>
+
+  <Accordion title="Include timezones for international servers">
+    Always clarify timezone if your server is international:
+
+    ```
+    options:"7pm EST (4pm PST), 8pm EST (5pm PST)"
+    ```
+
+    Or set a server default timezone in `/settings`.
+  </Accordion>
+
+  <Accordion title="Allow enough time for voting">
+    - **24 hours**: Minimum for quick decisions
+    - **48-72 hours**: Recommended for weekly planning
+    - **1 week**: For long-term or special events
+
+    Members in different timezones need time to see and vote.
+  </Accordion>
+
+  <Accordion title="Use results to inform scheduling">
+    Don't just use the #1 option:
+    - Consider top 2-3 for rotating schedules
+    - Use 2nd place as a backup time
+    - Analyze vote distribution (close race vs. clear winner)
+  </Accordion>
+
+  <Accordion title="Announce poll in your announcements channel">
+    After creating a poll, share it:
+    ```
+    @everyone Poll is live! Vote for the best weekly raid time.
+    [Jump to poll](link)
+    ```
+
+    This ensures maximum visibility.
+  </Accordion>
+</AccordionGroup>
+
+## Poll Embed Anatomy
+
+```
+📊 Weekly Raid Time                    ← Title
+
+React with a number to vote for your   ← Instructions
+preferred time(s)!
+
+1️⃣ Sat 7pm — 8 votes ████████░░        ← Option + votes + bar
+   └ @Player1, @Player2, @Player3      ← Voter list (if viewing results)
+
+2️⃣ Sat 8pm — 12 votes ████████████
+   └ @Player4, @Player5, @Player6 +9 more
+
+3️⃣ Sun 3pm — 5 votes █████░░░░░
+   └ @Player7, @Player8
+
+Total Voters: 15                       ← Participation count
+
+🏆 Top Choices:                         ← Leaderboard (if results)
+🥇 Sat 8pm (12 votes)
+🥈 Sat 7pm (8 votes)
+🥉 Sun 3pm (5 votes)
+
+Poll ID: POLL123 • Closes: in 2 days   ← Footer with ID and expiration
+```
+
+## Integrating Polls with Raids
+
+<Steps>
+  <Step title="Create and run poll">
+    ```bash
+    /poll create title:"Weekly raid time" options:"Sat 7pm, Sat 8pm, Sun 3pm" duration:72
+    ```
+  </Step>
+
+  <Step title="Wait for poll to close">
+    Either auto-closes after 72 hours, or manually close:
+    ```bash
+    /poll close id:POLL123
+    ```
+  </Step>
+
+  <Step title="Check results">
+    ```bash
+    /poll results id:POLL123
+    ```
+
+    Note the winning time: **Sat 8pm** (12 votes)
+  </Step>
+
+  <Step title="Create raid with winning time">
+    ```bash
+    /create
+    # Select type: Dragonspyre
+    # Set time: "saturday 8pm"
+    # Configure and create
+    ```
+  </Step>
+
+  <Step title="Announce to participants">
+    ```
+    @everyone Thanks for voting! Based on poll results,
+    weekly Dragonspyre raids will be Saturdays at 8pm EST.
+    First raid this Saturday - react to sign up!
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Save your poll ID! You can reference past polls to see historical voting patterns and adjust schedules over time.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Raids" icon="plus" href="/guides/creating-raids">
+    Use poll results to schedule raids
+  </Card>
+  <Card title="Time Parsing" icon="clock" href="/guides/time-parsing">
+    Learn more about time formats
+  </Card>
+</CardGroup>

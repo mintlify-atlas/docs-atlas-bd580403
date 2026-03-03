@@ -1,0 +1,502 @@
+---
+title: Monitoring & Observability
+description: Track performance, detect issues, and receive alerts using RaidBot's built-in monitoring system
+---
+
+## Overview
+
+RaidBot includes a comprehensive monitoring system with Prometheus-compatible metrics and Discord-based alerting. Monitor bot health, performance, and usage patterns in real-time.
+
+<Info>
+Metrics are automatically collected during bot operation with minimal performance overhead.
+</Info>
+
+## Metrics System
+
+### Available Metrics
+
+RaidBot tracks three types of metrics:
+
+<CardGroup cols={3}>
+  <Card title="Counters" icon="plus">
+    Cumulative counts that only increase (commands executed, raids created, etc.)
+  </Card>
+  <Card title="Gauges" icon="gauge">
+    Current state values that can go up or down (active raids, memory usage)
+  </Card>
+  <Card title="Histograms" icon="chart-line">
+    Distribution of values over time (command latency, query duration)
+  </Card>
+</CardGroup>
+
+### Counter Metrics
+
+```javascript
+// Track command executions
+metrics.incrementCounter('commands_total', { command: 'raid' });
+
+// Track reaction handling
+metrics.incrementCounter('reactions_total', { action: 'add' });
+
+// Track raid lifecycle
+metrics.incrementCounter('raids_created_total');
+metrics.incrementCounter('raids_closed_total');
+
+// Track waitlist operations
+metrics.incrementCounter('waitlist_promotions_total');
+
+// Track failures
+metrics.incrementCounter('dm_failures_total');
+```
+
+### Gauge Metrics
+
+```javascript
+// Update current state
+metrics.setGauge('active_raids_gauge', activeRaidCount);
+metrics.setGauge('participants_gauge', totalParticipants);
+```
+
+### Histogram Metrics
+
+```javascript
+// Record timing data
+const start = Date.now();
+// ... execute command ...
+const duration = (Date.now() - start) / 1000;
+metrics.recordHistogram('command_duration_seconds', duration, { command: 'raid' });
+
+// Record database query times
+const queryStart = Date.now();
+const result = db.prepare('SELECT * FROM raids').all();
+const queryDuration = (Date.now() - queryStart) / 1000;
+metrics.recordHistogram('db_query_duration_seconds', queryDuration);
+```
+
+## Metric Storage
+
+Metrics are stored in-memory with automatic retention limits:
+
+```javascript
+const metrics = {
+    // Counters
+    reactions_total: new Map(), // key: 'add|remove' -> count
+    commands_total: new Map(), // key: commandName -> count
+    dm_failures_total: 0,
+    raids_created_total: 0,
+    raids_closed_total: 0,
+    waitlist_promotions_total: 0,
+
+    // Histograms (last 1000 samples per command)
+    command_duration_seconds: new Map(), // key: commandName -> [durations]
+    db_query_duration_seconds: [], // last 10,000 queries
+
+    // Gauges
+    active_raids_gauge: 0,
+    participants_gauge: 0
+};
+```
+
+<Note>
+Histogram samples are automatically pruned to prevent unbounded memory growth while maintaining statistical accuracy.
+</Note>
+
+## Prometheus Export
+
+### Generate Metrics Output
+
+Export metrics in Prometheus format:
+
+```javascript
+const { generatePrometheusMetrics } = require('./utils/metrics');
+
+const metricsText = generatePrometheusMetrics();
+console.log(metricsText);
+```
+
+### Example Output
+
+```prometheus
+# HELP wizbot_reactions_total Total number of reactions processed
+# TYPE wizbot_reactions_total counter
+wizbot_reactions_total{action="add"} 1523
+wizbot_reactions_total{action="remove"} 342
+
+# HELP wizbot_commands_total Total number of commands executed
+# TYPE wizbot_commands_total counter
+wizbot_commands_total{command="raid"} 245
+wizbot_commands_total{command="signup"} 89
+wizbot_commands_total{command="stats"} 67
+
+# HELP wizbot_command_duration_seconds Command execution duration
+# TYPE wizbot_command_duration_seconds summary
+wizbot_command_duration_seconds_count{command="raid"} 245
+wizbot_command_duration_seconds_sum{command="raid"} 12.456
+wizbot_command_duration_seconds{command="raid",quantile="0.5"} 0.045
+wizbot_command_duration_seconds{command="raid",quantile="0.95"} 0.123
+wizbot_command_duration_seconds{command="raid",quantile="0.99"} 0.234
+
+# HELP wizbot_active_raids Current number of active raids
+# TYPE wizbot_active_raids gauge
+wizbot_active_raids 12
+```
+
+### Histogram Statistics
+
+Histograms automatically calculate percentiles:
+
+```javascript
+function calculateHistogramStats(values) {
+    if (values.length === 0) {
+        return { count: 0, sum: 0, p50: 0, p95: 0, p99: 0 };
+    }
+
+    const sorted = [...values].sort((a, b) => a - b);
+    const count = sorted.length;
+    const sum = sorted.reduce((a, b) => a + b, 0);
+
+    return {
+        count,
+        sum,
+        p50: sorted[Math.floor(count * 0.50)] || 0,  // Median
+        p95: sorted[Math.floor(count * 0.95)] || 0,  // 95th percentile
+        p99: sorted[Math.floor(count * 0.99)] || 0   // 99th percentile
+    };
+}
+```
+
+## JSON Metrics
+
+Get metrics as structured JSON for logging or custom integrations:
+
+```javascript
+const { getMetricsJSON } = require('./utils/metrics');
+
+const metrics = getMetricsJSON();
+console.log(JSON.stringify(metrics, null, 2));
+```
+
+### Example JSON Output
+
+```json
+{
+  "counters": {
+    "reactions_total": {
+      "action=\"add\"": 1523,
+      "action=\"remove\"": 342
+    },
+    "commands_total": {
+      "command=\"raid\"": 245,
+      "command=\"signup\"": 89
+    },
+    "dm_failures_total": 5,
+    "raids_created_total": 245,
+    "raids_closed_total": 198,
+    "waitlist_promotions_total": 34
+  },
+  "histograms": {
+    "command_duration_seconds": [
+      {
+        "labels": "command=\"raid\"",
+        "count": 245,
+        "sum": 12.456,
+        "p50": 0.045,
+        "p95": 0.123,
+        "p99": 0.234
+      }
+    ],
+    "db_query_duration_seconds": {
+      "count": 8932,
+      "sum": 45.678,
+      "p50": 0.003,
+      "p95": 0.012,
+      "p99": 0.028
+    }
+  },
+  "gauges": {
+    "active_raids_gauge": 12,
+    "participants_gauge": 156
+  },
+  "timestamp": "2026-03-03T10:30:00.000Z"
+}
+```
+
+## Automatic Logging
+
+Enable periodic metrics logging:
+
+```javascript
+const { startMetricsLogging } = require('./utils/metrics');
+
+// Log metrics every 5 minutes (default)
+startMetricsLogging();
+
+// Custom interval (every 10 minutes)
+startMetricsLogging(10 * 60 * 1000);
+```
+
+Metrics will be logged to your configured logger with full statistics.
+
+## Alert System
+
+### Alert Configuration
+
+Configure alerting thresholds and owner notifications:
+
+```javascript
+const ALERT_CONFIG = {
+    // Set via environment variable
+    ownerId: process.env.BOT_OWNER_ID || null,
+
+    // Alert thresholds
+    thresholds: {
+        commandLatencyP95: 2.0,        // Alert if p95 > 2 seconds
+        dmFailureRate: 0.15,           // Alert if >15% DM failure rate
+        activeRaidsHigh: 50,           // Alert if >50 active raids
+        memoryUsageMB: 512,            // Alert if >512MB RAM
+        circuitBreakerOpen: true       // Alert when circuit breaker opens
+    },
+
+    // Alert cooldowns (prevent spam)
+    cooldowns: {
+        commandLatency: 15 * 60 * 1000,    // 15 minutes
+        dmFailureRate: 30 * 60 * 1000,     // 30 minutes
+        activeRaidsHigh: 60 * 60 * 1000,   // 1 hour
+        memoryUsage: 30 * 60 * 1000,       // 30 minutes
+        circuitBreaker: 10 * 60 * 1000     // 10 minutes
+    }
+};
+```
+
+### Initialize Alerts
+
+```javascript
+const { initializeAlerts } = require('./utils/alerts');
+
+// Initialize with Discord client and owner ID
+initializeAlerts(client, process.env.BOT_OWNER_ID);
+```
+
+<Warning>
+Set the `BOT_OWNER_ID` environment variable to receive Discord DM alerts. Without it, alerts will be logged but not sent.
+</Warning>
+
+### Alert Types
+
+#### High Command Latency
+
+```javascript
+// Triggered when p95 latency exceeds threshold
+if (cmd.p95 > ALERT_CONFIG.thresholds.commandLatencyP95) {
+    await sendAlert(client, {
+        title: '⚠️ High Command Latency',
+        description: 'Command execution is taking longer than expected.',
+        fields: [
+            { name: 'Command', value: cmd.labels, inline: true },
+            { name: 'P95 Latency', value: `${cmd.p95.toFixed(2)}s`, inline: true },
+            { name: 'Threshold', value: '2.0s', inline: true }
+        ],
+        color: 0xFEE75C // Yellow
+    });
+}
+```
+
+#### Circuit Breaker Alerts
+
+```javascript
+// Alert when circuit breaker opens
+if (state.state === 'OPEN' && previousState !== 'OPEN') {
+    await sendAlert(client, {
+        title: '⚠️ Circuit Breaker Opened',
+        description: `The **${name}** circuit breaker has opened due to repeated failures.`,
+        fields: [
+            { name: 'State', value: state.state, inline: true },
+            { name: 'Failure Count', value: state.failureCount.toString(), inline: true },
+            { name: 'Next Retry', value: `<t:${Math.floor(state.nextAttempt / 1000)}:R>`, inline: true }
+        ],
+        color: 0xED4245 // Red
+    });
+}
+```
+
+#### DM Failure Rate
+
+```javascript
+// Alert when too many DMs fail
+const failureRate = dmFailures / waitlistPromotions;
+if (failureRate > ALERT_CONFIG.thresholds.dmFailureRate) {
+    await sendAlert(client, {
+        title: '⚠️ High DM Failure Rate',
+        description: 'Many DMs are failing to deliver to users.',
+        fields: [
+            { name: 'Failure Rate', value: `${(failureRate * 100).toFixed(1)}%`, inline: true },
+            { name: 'Failed DMs', value: dmFailures.toString(), inline: true }
+        ],
+        color: 0xFEE75C
+    });
+}
+```
+
+#### Memory Usage
+
+```javascript
+// Alert on high memory consumption
+if (heapUsedMB > ALERT_CONFIG.thresholds.memoryUsageMB) {
+    await sendAlert(client, {
+        title: '⚠️ High Memory Usage',
+        description: 'Bot is using more memory than expected.',
+        fields: [
+            { name: 'Heap Used', value: `${heapUsedMB.toFixed(1)} MB`, inline: true },
+            { name: 'Threshold', value: '512 MB', inline: true }
+        ],
+        color: 0xED4245 // Red
+    });
+}
+```
+
+### Daily Health Report
+
+Receive automatic daily health summaries at 9 AM:
+
+```javascript
+// Sent automatically every day
+await sendAlert(client, {
+    title: '📊 Daily Health Report',
+    description: `Bot health summary for ${now.toLocaleDateString()}`,
+    fields: [
+        { name: '⏱️ Uptime', value: `${uptimeDays}d ${uptimeHours}h`, inline: true },
+        { name: '🎮 Active Raids', value: metrics.gauges.active_raids_gauge.toString(), inline: true },
+        { name: '👥 Participants', value: metrics.gauges.participants_gauge.toString(), inline: true },
+        { name: '📝 Commands', value: totalCommands.toString(), inline: true },
+        { name: '💾 Memory', value: `${memoryMB.toFixed(1)} MB`, inline: true }
+    ],
+    color: 0x57F287 // Green
+});
+```
+
+### Test Alerts
+
+Verify alert delivery:
+
+```javascript
+const { sendTestAlert } = require('./utils/alerts');
+
+await sendTestAlert(client);
+```
+
+## Cooldown System
+
+Alerts respect cooldown periods to prevent spam:
+
+```javascript
+function canSendAlert(key) {
+    const lastTime = lastAlertTimes.get(key);
+    if (!lastTime) return true;
+
+    const cooldown = ALERT_CONFIG.cooldowns[key.split('_')[0]] || 15 * 60 * 1000;
+    return Date.now() - lastTime > cooldown;
+}
+```
+
+<Info>
+Cooldowns ensure you're not overwhelmed with alerts while still being notified of ongoing issues.
+</Info>
+
+## Integration Examples
+
+### HTTP Endpoint for Prometheus
+
+Expose metrics via HTTP for Prometheus scraping:
+
+```javascript
+const express = require('express');
+const { generatePrometheusMetrics } = require('./utils/metrics');
+
+const app = express();
+
+app.get('/metrics', (req, res) => {
+    res.set('Content-Type', 'text/plain');
+    res.send(generatePrometheusMetrics());
+});
+
+app.listen(9090, () => {
+    console.log('Metrics endpoint available at http://localhost:9090/metrics');
+});
+```
+
+### Grafana Dashboard
+
+Create visualizations using Prometheus metrics:
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'wizbot'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+```
+
+### Custom Logging Integration
+
+```javascript
+const { getMetricsJSON } = require('./utils/metrics');
+
+// Log to external service
+setInterval(() => {
+    const metrics = getMetricsJSON();
+    
+    // Send to logging service (e.g., Datadog, New Relic)
+    loggingService.log({
+        service: 'wizbot',
+        type: 'metrics',
+        data: metrics
+    });
+}, 60000); // Every minute
+```
+
+## Troubleshooting
+
+### Alerts Not Received
+
+**Problem:** Owner not receiving Discord DMs
+
+**Solutions:**
+1. Verify `BOT_OWNER_ID` environment variable is set
+2. Ensure bot can DM the owner (shared server or friend)
+3. Check alert cooldowns haven't suppressed recent alerts
+4. Review logs for alert delivery errors
+
+### High Memory Usage
+
+**Problem:** Memory gauge exceeds threshold
+
+**Solutions:**
+1. Check for memory leaks using heap snapshots
+2. Review histogram retention (currently 1,000 samples per command)
+3. Ensure closed raids are being cleaned up
+4. Consider reducing metric retention periods
+
+### Missing Metrics
+
+**Problem:** Expected metrics not appearing
+
+**Solutions:**
+1. Verify metrics are being incremented in code
+2. Check metric names match expected format
+3. Ensure metrics aren't being reset unexpectedly
+4. Review logs for metric collection errors
+
+## Best Practices
+
+1. **Set appropriate thresholds** based on your bot's normal behavior
+2. **Use cooldowns** to prevent alert fatigue
+3. **Monitor trends** not just absolute values
+4. **Test alerts** before deploying to production
+5. **Retain metrics** only as long as needed for analysis
+6. **Export to external systems** for long-term storage
+
+## See Also
+
+- [Database Architecture](/advanced/database) - Database performance metrics
+- [Configuration](/configuration/setup) - Alert and monitoring settings

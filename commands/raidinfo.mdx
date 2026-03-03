@@ -1,0 +1,203 @@
+---
+title: /raidinfo
+description: List active raids or view detailed information for a specific raid
+---
+
+The `/raidinfo` command provides several ways to view raid information: listing all active raids, viewing details for a specific raid, exporting raids to calendar format, and viewing raid history.
+
+## Command Signature
+
+```
+/raidinfo action:<list|detail|export|history> [raid_id:<raid_id>] [user:<user>] [limit:<number>] [days:<number>]
+```
+
+<ParamField path="action" type="choice" required>
+  What information to view:
+  - `list` - Show all active raids in the server
+  - `detail` - View full details for a specific raid
+  - `export` - Download raids as .ics calendar file
+  - `history` - View past raids for a user
+</ParamField>
+
+<ParamField path="raid_id" type="string">
+  Raid ID (required for `detail` action)
+</ParamField>
+
+<ParamField path="user" type="user">
+  User to view history for (defaults to yourself, requires admin to view others)
+</ParamField>
+
+<ParamField path="limit" type="integer">
+  Number of raids to show in history (1-50, default 10)
+</ParamField>
+
+<ParamField path="days" type="integer">
+  For calendar export: how many days ahead to include (1-120, default 30)
+</ParamField>
+
+## Actions
+
+<Tabs>
+  <Tab title="List">
+    Shows all active (non-closed) raids in the server.
+    
+    ```
+    /raidinfo action:list
+    ```
+    
+    **Output includes:**
+    - Raid type (template name, museum, key boss, etc.)
+    - Raid ID
+    - Signup counts (filled/total slots)
+    - Scheduled time (relative and absolute)
+    - Sorted by raid time (earliest first)
+    
+    **Example output:**
+    ```
+    Active Raids (3)
+    
+    1. Dragonspyre (Voracious Void)
+       Raid ID: ABC123
+       Signups: 8/12
+       Scheduled: tomorrow at 7:00 PM (in 1 day)
+    
+    2. Museum Signup
+       Raid ID: DEF456
+       Signups: 10/12
+       Scheduled: Saturday at 2:00 PM (in 2 days)
+    ```
+  </Tab>
+  <Tab title="Detail">
+    Shows comprehensive information for a specific raid.
+    
+    ```
+    /raidinfo action:detail raid_id:ABC123
+    ```
+    
+    **Output includes:**
+    - Raid type and ID
+    - Total signups vs. slots
+    - Scheduled time
+    - Full roster with roles and names
+    - Waitlist (if any)
+    - Side assignments (for Lemuria)
+    - Link to signup message
+    
+    **Example output:**
+    ```
+    Dragonspyre (Voracious Void) — ABC123
+    
+    Type: Dragonspyre (Voracious Void)
+    Signups: 12/12 (Full)
+    Scheduled: tomorrow at 7:00 PM
+    
+    Currently Signed Up:
+    1️⃣ Storm 1: @Player1
+    2️⃣ Storm 2: @Player2
+    3️⃣ Storm 3: @Player3
+    ...
+    
+    Signup Link: [Jump to Message](https://discord.com/...)
+    ```
+  </Tab>
+  <Tab title="Export Calendar">
+    Downloads upcoming raids as an .ics calendar file.
+    
+    ```
+    /raidinfo action:export days:30
+    ```
+    
+    **Features:**
+    - Exports raids with scheduled times
+    - Includes raid type, ID, and signup link
+    - Duration calculated from raid length (1.5 or 3 hours)
+    - Compatible with Google Calendar, Outlook, Apple Calendar
+    - Only includes raids in the specified time window
+    
+    **Usage:**
+    1. Run the command
+    2. Download the `raids.ics` file
+    3. Import into your calendar app
+    4. Raids appear as calendar events
+  </Tab>
+  <Tab title="History">
+    View past raids that a user participated in.
+    
+    ```
+    /raidinfo action:history
+    /raidinfo action:history user:@PlayerName limit:20
+    ```
+    
+    **Features:**
+    - Shows raid type, role played, and date
+    - Defaults to viewing your own history
+    - Requires admin permission to view others' history
+    - Limit parameter controls how many raids to show (max 50)
+    
+    **Example output:**
+    ```
+    Raid History for PlayerName
+    
+    Recent Raids:
+    1. Dragonspyre • Storm 1 • Mar 1, 2024
+    2. Museum • - • Feb 28, 2024
+    3. Lemuria • Jade • Feb 25, 2024
+    ...
+    
+    Showing 10 most recent raids
+    ```
+  </Tab>
+</Tabs>
+
+## Signup Status
+
+The list and detail views show signup status:
+
+- `5/12` - 5 players signed up, 12 total slots
+- `12/12 (Full)` - All slots filled
+- `8/12 + 3 waitlist` - 8 signed up, 3 on waitlist
+- `3 teams (11/12)` - Key boss with 3 teams
+
+## Time Display
+
+Times are shown in multiple formats:
+- **Relative**: "tomorrow at 7:00 PM", "in 2 days"
+- **Absolute**: Discord timestamp (adjusts to viewer's timezone)
+- **Calendar**: Full date and time in .ics format
+
+## Permissions
+
+- **list** - Available to all users
+- **detail** - Available to all users
+- **export** - Available to all users
+- **history** - Viewing your own: available to all; viewing others: requires admin
+
+## Examples
+
+<CodeGroup>
+```text List All Active Raids
+/raidinfo action:list
+```
+
+```text View Specific Raid Details
+/raidinfo action:detail raid_id:ABC123
+```
+
+```text Export 60 Days of Raids
+/raidinfo action:export days:60
+```
+
+```text View Your Raid History
+/raidinfo action:history limit:20
+```
+
+```text View Another User's History (Admin)
+/raidinfo action:history user:@PlayerName limit:15
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/raid](/commands/raid) - Manage raids
+- [/stats](/commands/stats) - View participation statistics
+- [/create](/commands/create) - Create new raids

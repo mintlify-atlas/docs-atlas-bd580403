@@ -1,0 +1,309 @@
+---
+title: Utility Commands
+description: General utility commands - help, ping, changelog, testalert
+---
+
+Utility commands provide general bot information and system health checks.
+
+## /help
+
+Interactive help system with command categories.
+
+### Command Signature
+
+```
+/help
+```
+
+### Features
+
+Opens an interactive panel with categorized commands:
+
+**Categories:**
+- 📋 **Status & Info** - View raids, stats, changelog
+- 📅 **Availability** - Set/view availability times
+- ⚔️ **Raid Management** (Admin) - Create & manage raids
+- ⚙️ **Server Setup** (Admin) - Channels, settings, templates
+- 🔄 **Recurring Raids** (Admin) - Automatic scheduling
+- 📊 **Stats & Analytics** (Admin) - Server-wide data
+- 📝 **Polling** (Admin) - Time slot polls
+
+**Navigation:**
+- Click category buttons to view detailed command help
+- Each category shows:
+  - Command signatures
+  - Descriptions
+  - Usage tips
+  - Examples
+- "← Back to Overview" returns to main menu
+- Buttons expire after 5 minutes
+
+**Permission-aware:**
+- Shows admin categories only if you have admin access
+- Shows privileged commands if you have specific role permissions
+- Adapts to your access level
+
+### Example Output
+
+```
+IOP Raids Command Reference
+
+You have full admin access. Click a category for detailed help.
+
+📋 Status & Info
+View raids, stats, changelog
+
+📅 Availability
+Set/view availability times
+
+⚔️ Raid Management
+Create & manage raids
+
+⚙️ Server Setup
+Channels, settings, templates
+
+🔄 Recurring Raids
+Automatic scheduling
+
+📊 Stats & Analytics
+Server-wide data
+
+📝 Polling
+Time slot polls
+
+Buttons expire after 5 minutes
+```
+
+---
+
+## /ping
+
+Check bot health and response time.
+
+### Command Signature
+
+```
+/ping
+```
+
+### Output
+
+Shows:
+- **Roundtrip latency** - Time from command to response
+- **WebSocket latency** - Connection to Discord
+- **Uptime** - How long the bot has been running
+- **Active Raids** - Open and closed raid counts
+
+### Example Output
+
+```
+🏓 Pong!
+• Roundtrip: 142ms
+• WebSocket: 38ms
+• Uptime: 2d 14h 32m
+• Active Raids: 8 open, 3 closed
+```
+
+### Interpreting Latency
+
+**Good:**
+- Roundtrip < 200ms
+- WebSocket < 100ms
+
+**Moderate:**
+- Roundtrip 200-500ms
+- WebSocket 100-200ms
+
+**Poor:**
+- Roundtrip > 500ms
+- WebSocket > 200ms
+
+**If latency is high:**
+- May be temporary Discord issues
+- May be bot server load
+- Contact admin if persistent
+
+---
+
+## /changelog
+
+View recent bot updates and new features.
+
+### Command Signature
+
+```
+/changelog
+```
+
+### Current Release: 13
+
+**New in Release 13:**
+
+**📜 Raid History**
+- `/raidinfo action:history` - View past raids
+- Shows raid type, role played, and date
+- Admins can view history for other users
+
+**❌ No-Show Tracking**
+- Mark no-shows via `/raid` panel
+- No-show count shown in `/stats user`
+- "Reliable" achievement for perfect attendance
+
+**🔍 Smart Substitute Finder**
+- "Find Sub" button in `/raid` panel
+- Finds users with experience in needed role
+- Prioritizes users available at raid time
+- Shows top 5 candidates
+
+**🏆 Leaderboards & Achievements**
+- `/leaderboard top` - Top raiders
+- `/leaderboard role <name>` - Top for specific role
+- `/leaderboard achievements` - View achievements
+- 11 achievements to unlock
+
+**Previous (Release 12):**
+- Performance monitoring
+- DM-based alerts
+- `/testalert` command
+
+### Example Output
+
+```
+Release 13 Changelog
+
+Raid history, no-show tracking, smart substitute finder,
+and leaderboards!
+
+📜 Raid History
+• /raidinfo action:history [user] [limit] — View past
+  raids you participated in
+• Shows raid type, role played, and date
+• Admins can view history for other users
+
+❌ No-Show Tracking
+• Mark no-shows via the /raid panel after a raid closes
+• No-show count shown in /stats user
+• "Reliable" achievement for perfect attendance
+
+🔍 Smart Substitute Finder
+• "Find Sub" button in /raid panel
+• Finds users with experience in the needed role
+• Prioritizes users who are available at raid time
+• Shows top 5 candidates ranked by fit
+
+🏆 Leaderboards & Achievements
+• /leaderboard top — Top raiders by total raids
+• /leaderboard role <name> — Top players for a specific role
+• /leaderboard achievements — View unlocked achievements
+• 11 achievements to unlock (Rookie Raider → Raid Master)
+
+Previous (Release 12):
+Performance monitoring, DM-based alerts, /testalert command
+```
+
+---
+
+## /testalert
+
+Send a test alert to the bot owner.
+
+<Note>
+Requires Manage Server permission or configured admin role.
+</Note>
+
+### Command Signature
+
+```
+/testalert
+```
+
+### Purpose
+
+Verifies the DM-based alert system is working.
+
+### Requirements
+
+**Environment variable:**
+```
+BOT_OWNER_ID=123456789012345678
+```
+
+**Must be set to:**
+- Your Discord user ID
+- Bot must be able to DM you
+
+### What It Does
+
+1. Sends a test alert DM to the bot owner
+2. Confirms delivery in ephemeral response
+3. If delivery fails, reports error
+
+### Alert System
+
+Once configured, the bot sends DM alerts for:
+
+**Performance Issues:**
+- High latency (>500ms for 5+ consecutive minutes)
+- Memory issues
+- Circuit breaker triggered
+
+**Operational Events:**
+- DM delivery failures
+- Critical errors
+- Daily health summary (9 AM)
+
+**Debug Channel:**
+If a debug channel is configured via `/setchannel`, alerts are also posted there.
+
+### Example Output
+
+**Success:**
+```
+✅ Test alert sent to bot owner. Check your DMs to verify
+the alert system is working.
+```
+
+**Failure:**
+```
+❌ Failed to send test alert. Make sure BOT_OWNER_ID is
+configured correctly.
+```
+
+### Test Alert DM
+
+```
+🔔 Test Alert
+
+This is a test alert from RaidBot.
+
+If you're seeing this, the alert system is working correctly!
+
+You'll receive alerts for:
+• High latency (>500ms sustained)
+• Memory issues
+• DM delivery failures
+• Daily health summaries (9 AM)
+
+Time: [timestamp]
+```
+
+### Troubleshooting
+
+**Alert not received:**
+1. Verify `BOT_OWNER_ID` is set correctly
+2. Check that you can receive DMs from the bot
+3. Try `/ping` to verify bot is responding
+4. Check debug channel (if configured) for error logs
+
+**DMs disabled:**
+1. Enable DMs in Privacy Settings
+2. Or configure a debug channel instead
+
+---
+
+## Related Commands
+
+- [/raidinfo](/commands/raidinfo) - View raid information
+- [/stats](/commands/stats) - View statistics
+- [/setchannel](/commands/setchannel) - Configure debug channel
+- [/settings](/commands/settings) - Bot configuration

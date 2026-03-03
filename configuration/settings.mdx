@@ -1,0 +1,387 @@
+---
+title: Server Settings
+description: Configure reminders, auto-close, threads, and raid leader roles
+---
+
+RaidBot provides extensive server-level configuration for automating raid management, reminders, and user experience features.
+
+## Using /settings
+
+Access the interactive settings panel:
+
+```
+/settings
+```
+
+This opens an embed with toggle buttons and dropdown menus to configure all server settings.
+
+<Note>
+  Requires "Manage Server" permission or admin role (commands/settings.js:37). Panel times out after 5 minutes (commands/settings.js:56).
+</Note>
+
+## Reminder Settings
+
+RaidBot can automatically remind raid creators and participants before raids start.
+
+### Creator Reminders
+
+Notify the raid creator before the raid begins:
+
+<ParamField path="creatorRemindersEnabled" type="boolean" default="true">
+  Enable or disable creator reminders.
+  
+  **Toggle:** Click "Creator: On/Off" button in settings panel
+</ParamField>
+
+<ParamField path="creatorReminderSeconds" type="integer" default="1800">
+  How many seconds before raid start to send the reminder.
+  
+  **Default:** 1800 seconds (30 minutes)
+  
+  **Available options:**
+  - Disabled (0 min)
+  - 5 min (300 sec)
+  - 10 min (600 sec)
+  - 15 min (900 sec)
+  - 30 min (1800 sec)
+  - 60 min (3600 sec)
+  
+  Select from the "Creator reminder timing" dropdown.
+</ParamField>
+
+### Participant Reminders
+
+Notify all signed-up users before the raid begins:
+
+<ParamField path="participantRemindersEnabled" type="boolean" default="true">
+  Enable or disable participant reminders.
+  
+  **Toggle:** Click "Participant: On/Off" button in settings panel
+</ParamField>
+
+<ParamField path="participantReminderSeconds" type="integer" default="600">
+  How many seconds before raid start to send participant reminders.
+  
+  **Default:** 600 seconds (10 minutes)
+  
+  **Available options:**
+  - Disabled (0 min)
+  - 5 min (300 sec)
+  - 10 min (600 sec)
+  - 15 min (900 sec)
+  - 30 min (1800 sec)
+  - 60 min (3600 sec)
+  
+  Select from the "Participant reminder timing" dropdown.
+</ParamField>
+
+### How Reminders Work
+
+1. When a raid is created, the bot schedules reminder tasks
+2. At the configured time before raid start:
+   - **Creator reminder:** DM sent to raid creator with raid details
+   - **Participant reminder:** DM sent to all signed-up users
+3. Reminders are marked as sent to prevent duplicates (state.js:719)
+
+<Warning>
+  Users must allow DMs from server members for reminders to work. If DM delivery fails, no error is shown to the user.
+</Warning>
+
+## Auto-Close Settings
+
+Automatically close full raids before they start to prevent last-minute signups.
+
+<ParamField path="autoCloseSeconds" type="integer" default="3600">
+  How many seconds before raid start to auto-close if the raid is full.
+  
+  **Default:** 3600 seconds (60 minutes)
+  
+  **Available options:**
+  - Disabled (0 min)
+  - 15 min (900 sec)
+  - 30 min (1800 sec)
+  - 60 min (3600 sec)
+  - 2 hours (7200 sec)
+  - 8 hours (28800 sec)
+  - 24 hours (86400 sec)
+  
+  Select from the "Auto-close timing" dropdown.
+</ParamField>
+
+<ParamField path="lastAutoCloseSeconds" type="integer" default="3600">
+  Internal: Remembers last auto-close setting when toggling on/off (commands/settings.js:101-107).
+</ParamField>
+
+### Auto-Close Behavior
+
+1. Bot checks all raids periodically
+2. If a raid is:
+   - Full (all slots filled)
+   - Not yet closed
+   - Within auto-close window
+3. The raid is automatically closed
+4. Closed raids prevent new signups
+5. Waitlist users are not promoted
+
+<Tip>
+  Use auto-close to prevent signup churn right before raids start. Recommended: 60-120 minutes.
+</Tip>
+
+## Thread Settings
+
+Create dedicated discussion threads for each raid signup.
+
+<ParamField path="threadsEnabled" type="boolean" default="false">
+  Enable automatic thread creation for raids.
+  
+  **Toggle:** Click "Threads: On/Off" button in settings panel
+</ParamField>
+
+<ParamField path="threadAutoArchiveMinutes" type="integer" default="1440">
+  Discord thread auto-archive duration in minutes.
+  
+  **Default:** 1440 minutes (24 hours)
+  
+  **Options:** 60, 1440, 4320, 10080 (depends on server boost level)
+</ParamField>
+
+### Thread Creation
+
+When threads are enabled:
+
+1. Bot creates a thread attached to each raid signup message
+2. Thread name: "Raid Discussion - [Raid Type]"
+3. Thread is auto-archived after configured duration
+4. Users can discuss strategy, ask questions, etc.
+
+<Note>
+  Thread creation requires "Create Public Threads" permission. If permission is missing, thread creation fails silently.
+</Note>
+
+## Raid Leader Role
+
+Mark raid creators with a special role to show leadership on signups.
+
+<ParamField path="raidLeaderRoleId" type="string" default="null">
+  Role ID to check for raid leader marker.
+  
+  **Selection:** Use the role selector dropdown in settings panel
+  
+  Users with this role who create raids get a ⭐ marker on signups.
+</ParamField>
+
+### Raid Leader Marker
+
+When configured:
+
+1. User creates a raid
+2. Bot checks if user has the raid leader role
+3. If yes, their signup shows: `Username ⭐`
+4. If no, normal display: `Username`
+
+This helps identify experienced raid leaders at a glance.
+
+<Tip>
+  Use this for veteran raiders, guild officers, or certified raid leaders.
+</Tip>
+
+## Timezone Settings
+
+Set the default timezone for raid time parsing.
+
+<ParamField path="defaultTimezone" type="string" default="America/New_York">
+  IANA timezone identifier for the server.
+  
+  **Format:** Continent/City (e.g., "America/Chicago", "Europe/London")
+  
+  **Setting:** Click "TZ" button in settings panel, enter timezone in modal (commands/settings.js:66-97)
+</ParamField>
+
+### Supported Timezones
+
+Must be valid IANA timezone identifiers:
+
+<CodeGroup>
+```
+America/New_York (Eastern)
+America/Chicago (Central)
+America/Denver (Mountain)
+America/Los_Angeles (Pacific)
+```
+
+```
+Europe/London (UK)
+Europe/Paris (Central European)
+Europe/Berlin (Central European)
+Asia/Tokyo (Japan)
+```
+
+```
+Australia/Sydney
+Pacific/Auckland
+Asia/Shanghai
+```
+</CodeGroup>
+
+### Timezone Validation
+
+The bot validates timezone input (commands/settings.js:87-90):
+
+- Must be valid IANA format
+- Invalid timezones are rejected with error message
+- Helps ensure consistent time parsing
+
+<Warning>
+  Invalid timezone format will reject the setting. Use exact IANA identifiers from the timezone database.
+</Warning>
+
+## Settings Storage
+
+All settings are stored per-guild in the database (state.js:428-497):
+
+<CodeGroup>
+```sql Schema
+CREATE TABLE guilds (
+  id TEXT PRIMARY KEY,
+  creator_reminder_seconds INTEGER DEFAULT 1800,
+  participant_reminder_seconds INTEGER DEFAULT 600,
+  auto_close_seconds INTEGER DEFAULT 3600,
+  last_auto_close_seconds INTEGER DEFAULT 3600,
+  creator_reminders_enabled INTEGER DEFAULT 1,
+  participant_reminders_enabled INTEGER DEFAULT 1,
+  raid_leader_role_id TEXT,
+  threads_enabled INTEGER DEFAULT 0,
+  thread_auto_archive_minutes INTEGER DEFAULT 1440,
+  default_timezone TEXT DEFAULT 'America/New_York'
+);
+```
+
+```js Defaults
+{
+  creatorReminderSeconds: 1800,        // 30 min
+  participantReminderSeconds: 600,     // 10 min
+  autoCloseSeconds: 3600,              // 60 min
+  lastAutoCloseSeconds: 3600,          // 60 min
+  creatorRemindersEnabled: true,
+  participantRemindersEnabled: true,
+  raidLeaderRoleId: null,
+  threadsEnabled: false,
+  threadAutoArchiveMinutes: 1440,      // 24 hours
+  defaultTimezone: 'America/New_York'
+}
+```
+</CodeGroup>
+
+Changes are persisted immediately when settings are updated (state.js:470-496).
+
+## Settings Panel Components
+
+The interactive panel includes (commands/settings.js:199-265):
+
+### Toggle Buttons
+
+- **Creator: On/Off** — Enable/disable creator reminders
+- **Participant: On/Off** — Enable/disable participant reminders
+- **Auto-close: On/Off** — Enable/disable auto-close
+- **Threads: On/Off** — Enable/disable thread creation
+- **TZ: [Current]** — Open timezone modal
+
+### Dropdown Menus
+
+- **Creator reminder timing** — Select reminder time
+- **Participant reminder timing** — Select reminder time
+- **Auto-close timing** — Select auto-close time
+
+### Role Selector
+
+- **Raid leader role** — Select role for ⭐ marker
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Reasonable Reminders" icon="clock">
+    Set creator reminders 30-60 min before, participant reminders 10-15 min before.
+  </Card>
+  <Card title="Auto-Close Timing" icon="door-closed">
+    Auto-close 60-120 minutes before raid start to prevent last-minute changes.
+  </Card>
+  <Card title="Enable Threads" icon="comments">
+    Threads reduce channel clutter and provide dedicated discussion space.
+  </Card>
+  <Card title="Raid Leader Recognition" icon="star">
+    Use raid leader role to highlight experienced leaders and build community trust.
+  </Card>
+  <Card title="Consistent Timezone" icon="globe">
+    Set timezone to match your server's primary region for accurate time parsing.
+  </Card>
+  <Card title="Test Reminders" icon="bell">
+    Create a test raid to verify reminder timing and DM delivery.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Reminders not being sent">
+    1. Check if reminders are enabled
+    2. Verify users allow DMs from server members
+    3. Check bot has permission to DM users
+    4. Ensure raid time is in the future (reminders don't fire for past raids)
+  </Accordion>
+
+  <Accordion title="Auto-close not working">
+    1. Verify auto-close is enabled (not set to 0)
+    2. Check if raid is actually full
+    3. Ensure raid time is in the future
+    4. Verify auto-close time hasn't already passed
+  </Accordion>
+
+  <Accordion title="Threads not created">
+    1. Check if threads are enabled
+    2. Verify bot has "Create Public Threads" permission
+    3. Ensure channel allows thread creation
+    4. Check server boost level for thread limits
+  </Accordion>
+
+  <Accordion title="Raid leader marker not showing">
+    1. Verify raid leader role is configured
+    2. Check if creator has the role
+    3. Ensure role is above bot's role in hierarchy
+    4. Verify role ID is correct
+  </Accordion>
+
+  <Accordion title="Invalid timezone error">
+    Use exact IANA timezone format:
+    - ✅ America/New_York
+    - ✅ Europe/London
+    - ❌ EST
+    - ❌ GMT
+    - ❌ New York
+    
+    Find valid timezones at [timeapi.io/timezones](https://timeapi.io/timezones)
+  </Accordion>
+
+  <Accordion title="Settings not saving">
+    1. Ensure you have "Manage Server" or admin role
+    2. Check database write permissions
+    3. Look for errors in debug channel
+    4. Verify settings panel hasn't timed out (5 min limit)
+  </Accordion>
+</AccordionGroup>
+
+## Settings Embed Display
+
+The settings panel shows current configuration (commands/settings.js:160-196):
+
+```
+Your Server • Settings
+
+Creator reminders: 30 min before start
+Participant reminders: 10 min before start
+Auto-close full raids: 60 min before start
+Discussion threads: Enabled (auto-created per raid)
+Raid leader role: @Raid Leader (⭐ on signups)
+Default timezone: America/New_York
+```
+
+Disabled features show "Disabled" instead of timing.

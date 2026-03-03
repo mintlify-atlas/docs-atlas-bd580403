@@ -1,0 +1,430 @@
+---
+title: Time Parsing
+description: Learn how RaidBot parses natural language dates and times using chrono-node for flexible raid scheduling
+---
+
+RaidBot uses the powerful **chrono-node** library to parse natural language date and time inputs. This means you can schedule raids using everyday language instead of rigid formats.
+
+## How It Works
+
+When you enter a date/time for a raid, RaidBot:
+
+1. Receives your input (e.g., "tomorrow 7pm")
+2. Uses chrono-node to parse it into a specific timestamp
+3. Applies your server's configured timezone
+4. Converts to Unix timestamp for Discord
+5. Displays using Discord's timestamp formatting
+
+<Info>
+  Discord timestamps automatically show in each user's local timezone, so everyone sees the raid time correctly for their location!
+</Info>
+
+## Supported Formats
+
+### Natural Language
+
+The most flexible and user-friendly option:
+
+<Tabs>
+  <Tab title="Relative Times">
+    ```text
+    tomorrow 7pm
+    tomorrow at 8:30pm
+    next friday 6pm
+    saturday at 3pm
+    in 2 hours
+    in 30 minutes
+    ```
+
+    <Tip>
+      Chrono understands "tomorrow", "next [day]", "this [day]", and relative offsets like "in X hours".
+    </Tip>
+  </Tab>
+
+  <Tab title="Specific Dates">
+    ```text
+    march 15 at 7pm
+    march 15th 7pm
+    15th of march at 7pm
+    3/15 at 7pm
+    15 mar 7pm
+    ```
+
+    <Note>
+      When no year is specified, chrono assumes the current year. For dates in the past, it automatically moves to next year.
+    </Note>
+  </Tab>
+
+  <Tab title="With Timezones">
+    ```text
+    tomorrow 7pm EST
+    friday 8pm PST
+    saturday 3pm GMT
+    next monday 6pm CST
+    ```
+
+    Supported timezone abbreviations:
+    - EST/EDT (Eastern)
+    - CST/CDT (Central)
+    - MST/MDT (Mountain)
+    - PST/PDT (Pacific)
+    - GMT/UTC
+    - And many more!
+
+    <Warning>
+      Timezone abbreviations can be ambiguous (CST = Central or China Standard Time). For precision, use the `/settings timezone` command to set a default server timezone.
+    </Warning>
+  </Tab>
+
+  <Tab title="Casual Phrases">
+    ```text
+    tonight at 9
+    this evening at 7:30pm
+    this weekend
+    next week friday at 6pm
+    ```
+
+    Chrono is smart enough to understand casual time references!
+  </Tab>
+</Tabs>
+
+### ISO 8601 Format
+
+For precision and automation, use ISO 8601:
+
+```text
+2026-03-15T19:00:00
+2026-03-15 19:00:00
+2026-03-15T19:00:00-05:00  (with timezone offset)
+```
+
+<Info>
+  ISO 8601 is perfect for:
+  - Scheduling tools and scripts
+  - Avoiding timezone ambiguity
+  - International servers
+</Info>
+
+### Unix Timestamps
+
+Direct Unix timestamps (seconds since epoch) are supported:
+
+```text
+1741392000
+1741395600
+```
+
+Get Unix timestamps from:
+- [Epoch Converter](https://www.epochconverter.com/)
+- Discord's timestamp generator
+- Programming scripts
+
+<Tip>
+  Unix timestamps are timezone-agnostic and always precise. Perfect for automated raid scheduling!
+</Tip>
+
+## Timezone Handling
+
+RaidBot uses a hierarchy to determine which timezone to use:
+
+<Steps>
+  <Step title="Explicit timezone in input">
+    If you include a timezone in your input, it takes priority:
+
+    ```text
+    tomorrow 7pm EST  ← Uses EST
+    ```
+  </Step>
+
+  <Step title="Server default timezone">
+    If no timezone is specified, RaidBot uses your server's configured default:
+
+    ```bash
+    /settings timezone:America/New_York
+    ```
+
+    Then all inputs like "tomorrow 7pm" use New York time.
+  </Step>
+
+  <Step title="UTC fallback">
+    If no server timezone is configured and no timezone is in the input, UTC is used.
+  </Step>
+</Steps>
+
+### Setting Server Timezone
+
+Configure your server's default timezone:
+
+```bash
+/settings timezone:America/New_York
+/settings timezone:America/Chicago
+/settings timezone:Europe/London
+/settings timezone:America/Los_Angeles
+```
+
+Use IANA timezone identifiers (e.g., `America/New_York`, not `EST`).
+
+<Warning>
+  Using IANA identifiers instead of abbreviations ensures correct daylight saving time handling.
+</Warning>
+
+### Common Timezone Identifiers
+
+| Region | IANA Identifier |
+|--------|----------------|
+| US Eastern | `America/New_York` |
+| US Central | `America/Chicago` |
+| US Mountain | `America/Denver` |
+| US Pacific | `America/Los_Angeles` |
+| UK | `Europe/London` |
+| Central Europe | `Europe/Paris` |
+| Australia East | `Australia/Sydney` |
+| Japan | `Asia/Tokyo` |
+
+Full list: [IANA Time Zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+
+## Forward Date Preference
+
+Chrono uses **forward date parsing** by default:
+
+- If you say "friday" and today is Saturday, it means **next Friday**, not yesterday
+- If you say "3pm" and it's currently 5pm, it means **tomorrow at 3pm**
+- Past times are automatically bumped to the future
+
+<Info>
+  This prevents accidental scheduling of raids in the past.
+</Info>
+
+Example:
+```text
+Current time: Saturday, March 8, 2026, 6:00 PM
+
+Input: "friday 7pm"
+Parsed: Friday, March 14, 2026, 7:00 PM (next week)
+
+Input: "3pm"
+Parsed: Sunday, March 9, 2026, 3:00 PM (tomorrow)
+```
+
+## Parsing Errors
+
+If RaidBot cannot parse your input, you'll see:
+
+```
+Could not parse that time. Try natural language like "tomorrow 7pm"
+or a Unix timestamp.
+```
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Ambiguous dates">
+    **Problem:**
+    ```text
+    2/3/2026  ← Is this Feb 3 or Mar 2?
+    ```
+
+    **Solution:**
+    Use unambiguous formats:
+    ```text
+    march 3, 2026
+    2026-03-02
+    mar 3 at 7pm
+    ```
+  </Accordion>
+
+  <Accordion title="Missing time component">
+    **Problem:**
+    ```text
+    tomorrow  ← What time tomorrow?
+    ```
+
+    **Solution:**
+    Always include a time:
+    ```text
+    tomorrow 7pm
+    tomorrow at 8:00pm
+    ```
+  </Accordion>
+
+  <Accordion title="Unusual formats">
+    **Problem:**
+    ```text
+    7 in the evening on the 15th  ← Too complex
+    ```
+
+    **Solution:**
+    Simplify to standard patterns:
+    ```text
+    march 15 at 7pm
+    15th march 7pm
+    ```
+  </Accordion>
+
+  <Accordion title="Typos and misspellings">
+    **Problem:**
+    ```text
+    tommorow 7pm  ← Misspelled
+    fridy 8pm     ← Misspelled
+    ```
+
+    **Solution:**
+    Double-check spelling or use ISO format:
+    ```text
+    2026-03-15 19:00
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use specific times" icon="clock">
+    Always include hours and minutes:
+    - ✅ "tomorrow 7:30pm"
+    - ❌ "tomorrow evening"
+  </Card>
+
+  <Card title="Specify timezone for international servers" icon="globe">
+    If your server has global members:
+    - ✅ "friday 7pm EST"
+    - ✅ Set server default timezone
+  </Card>
+
+  <Card title="Use ISO for precision" icon="calendar-check">
+    For exact scheduling:
+    - ✅ "2026-03-15T19:00:00"
+    - Eliminates all ambiguity
+  </Card>
+
+  <Card title="Test complex times" icon="flask">
+    Before using unusual formats in production:
+    - Create a test raid first
+    - Verify the parsed time is correct
+    - Use `/raid` to check the timestamp
+  </Card>
+</CardGroup>
+
+## Examples by Use Case
+
+<Tabs>
+  <Tab title="Weekly Raids">
+    For raids that happen the same time each week:
+
+    ```text
+    Week 1: "saturday 7pm"
+    Week 2: "next saturday 7pm"
+    Week 3: "saturday 7pm" (will auto-advance to next Saturday)
+    ```
+
+    <Tip>
+      After creating a raid, use the **Duplicate** feature to copy it for next week with a new time!
+    </Tip>
+  </Tab>
+
+  <Tab title="Same Day Raids">
+    For raids later today:
+
+    ```text
+    If it's 3pm now:
+    "tonight 8pm"     → Today at 8pm
+    "8pm"             → Today at 8pm (if 8pm hasn't passed)
+    "in 2 hours"      → 5pm today
+    ```
+  </Tab>
+
+  <Tab title="Special Events">
+    For one-time events at specific dates:
+
+    ```text
+    "december 25 at 3pm"     → Christmas raid
+    "new year's eve at 11pm" → New Year's raid
+    "2026-07-04 19:00"       → July 4th raid
+    ```
+  </Tab>
+
+  <Tab title="Quick Scheduling">
+    For impromptu raids:
+
+    ```text
+    "in 30 minutes"
+    "in 1 hour"
+    "in 2 hours"
+    "tomorrow 6pm" (if planning for next day)
+    ```
+  </Tab>
+</Tabs>
+
+## Testing Your Time Input
+
+Before creating a raid, you can test time parsing:
+
+<Steps>
+  <Step title="Start raid creation">
+    ```bash
+    /create
+    ```
+  </Step>
+
+  <Step title="Set time">
+    Click "Set date/time" and enter your time string.
+  </Step>
+
+  <Step title="Check the preview">
+    The summary embed shows the parsed timestamp:
+    ```
+    Time: Friday, March 15, 2026 7:00 PM
+    ```
+  </Step>
+
+  <Step title="Verify correctness">
+    If the parsed time is wrong:
+    - Click "Set date/time" again
+    - Try a different format
+    - Or cancel and use `/poll` to let players vote on times
+  </Step>
+</Steps>
+
+<Info>
+  The creation panel shows the parsed timestamp before you commit, so you can always verify before creating the raid!
+</Info>
+
+## Advanced: Chrono Reference Date
+
+For developers and advanced users, chrono-node uses a reference date:
+
+```javascript
+const referenceDate = new Date(); // Current time
+const parsedDate = chrono.parseDate('tomorrow 7pm', referenceDate);
+```
+
+When a server timezone is configured:
+```javascript
+const offsetMinutes = getTimezoneOffsetMinutes(timezone, referenceDate);
+const ref = { instant: referenceDate, timezone: offsetMinutes };
+const parsedDate = chrono.parseDate('tomorrow 7pm', ref);
+```
+
+This ensures all parsing respects the server's timezone setting.
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Polls" icon="chart-bar" href="/guides/polls">
+    Can't decide on a time? Use polls to let members vote on preferred raid times.
+  </Card>
+  <Card title="Availability System" icon="calendar-check" href="/features/availability">
+    Let players mark when they're available, and RaidBot will suggest optimal times.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Creating Raids" icon="plus" href="/guides/creating-raids">
+    Use your time parsing knowledge to create raids
+  </Card>
+  <Card title="Managing Raids" icon="sliders" href="/guides/managing-raids">
+    Change raid times after creation
+  </Card>
+</CardGroup>

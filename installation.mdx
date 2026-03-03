@@ -1,0 +1,432 @@
+---
+title: Installation
+description: Complete setup guide for WizBot including configuration, database, and deployment
+---
+
+## Prerequisites
+
+Before installing WizBot, ensure you have:
+
+- **Node.js** (v16 or higher recommended)
+- **npm** (comes with Node.js)
+- **Discord Bot Application** created in the [Discord Developer Portal](https://discord.com/developers/applications)
+- **Bot Token** and **Client ID** from your Discord application
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Download the WizBot source code:
+    
+    ```bash
+    git clone <repository-url>
+    cd wizbot
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This installs:
+    - `discord.js` — Discord API library
+    - `chrono-node` — Natural language date parsing
+    - `better-sqlite3` — Fast SQLite database
+    - `async-mutex` — Concurrency control
+    - `dotenv` — Environment variable management
+  </Step>
+
+  <Step title="Configure Bot Credentials">
+    You have two configuration options:
+    
+    ### Option 1: config.json (Recommended for development)
+    
+    Create a `config.json` file in the root directory:
+    
+    ```json
+    {
+      "clientId": "YOUR_CLIENT_ID",
+      "token": "YOUR_BOT_TOKEN",
+      "allowedGuildIds": ["GUILD_ID_1", "GUILD_ID_2"],
+      "ownerId": "YOUR_USER_ID"
+    }
+    ```
+    
+    ### Option 2: Environment Variables (Recommended for production)
+    
+    Set these environment variables:
+    
+    ```bash
+    export DISCORD_CLIENT_ID="YOUR_CLIENT_ID"
+    export DISCORD_TOKEN="YOUR_BOT_TOKEN"
+    export DISCORD_ALLOWED_GUILDS="GUILD_ID_1,GUILD_ID_2"
+    export BOT_OWNER_ID="YOUR_USER_ID"
+    ```
+    
+    Or use a `.env` file:
+    
+    ```bash .env
+    DISCORD_CLIENT_ID=YOUR_CLIENT_ID
+    DISCORD_TOKEN=YOUR_BOT_TOKEN
+    DISCORD_ALLOWED_GUILDS=GUILD_ID_1,GUILD_ID_2
+    BOT_OWNER_ID=YOUR_USER_ID
+    ```
+    
+    <Note>
+      Environment variables take precedence over `config.json` if both are present.
+    </Note>
+  </Step>
+
+  <Step title="Start the Bot">
+    Launch WizBot:
+    
+    ```bash
+    node bot.js
+    ```
+    
+    You should see output indicating the bot is online:
+    
+    ```text
+    [INFO] Logged in as WizBot#1234!
+    [INFO] Commands registered successfully
+    [INFO] Reinitializing raids...
+    ```
+  </Step>
+</Steps>
+
+## Configuration Reference
+
+### Required Configuration
+
+| Parameter | Environment Variable | Description |
+|-----------|---------------------|-------------|
+| `clientId` | `DISCORD_CLIENT_ID` | Your Discord bot's Client ID from the Developer Portal |
+| `token` | `DISCORD_TOKEN` | Your Discord bot token |
+
+### Optional Configuration
+
+| Parameter | Environment Variable | Description | Default |
+|-----------|---------------------|-------------|----------|
+| `allowedGuildIds` | `DISCORD_ALLOWED_GUILDS` | Comma-separated list of allowed guild IDs. Leave empty to allow all guilds. | All guilds allowed |
+| `ownerId` | `BOT_OWNER_ID` | Your Discord user ID for receiving DM-based performance alerts | None |
+| — | `LOG_LEVEL` | Logging verbosity: `DEBUG`, `INFO`, `WARN`, `ERROR` | `INFO` |
+| — | `LOG_TO_FILE` | Enable file logging | `false` |
+
+### Finding Your IDs
+
+<Accordion title="How to get your Client ID and Token">
+  1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+  2. Select your application (or create a new one)
+  3. Navigate to the **Bot** section
+  4. **Token**: Click "Reset Token" to view your bot token (keep this secret!)
+  5. **Client ID**: Found in the **General Information** section
+</Accordion>
+
+<Accordion title="How to get your Guild ID">
+  1. Enable Developer Mode in Discord (User Settings > Advanced > Developer Mode)
+  2. Right-click your server icon
+  3. Click "Copy Server ID"
+</Accordion>
+
+<Accordion title="How to get your User ID">
+  1. Enable Developer Mode in Discord (User Settings > Advanced > Developer Mode)
+  2. Right-click your username anywhere in Discord
+  3. Click "Copy User ID"
+</Accordion>
+
+## Database Setup
+
+WizBot uses **SQLite** for data persistence. The database is automatically created at `data/wizbot.db` on first run.
+
+### Database Schema
+
+The database includes tables for:
+- Active raids and signups
+- Guild settings and permissions
+- Recurring raid schedules
+- User availability data
+- Participation statistics
+- Audit logs
+
+<Note>
+  The `data/` directory is gitignored by default. Make sure to back up this directory regularly!
+</Note>
+
+### Migrating from JSON (Upgrading Users)
+
+If you're upgrading from an older version that used JSON files:
+
+```bash
+node db/migrate.js
+```
+
+This command:
+1. Reads existing JSON data files
+2. Imports all data into the SQLite database
+3. Creates backups of the original JSON files
+4. Preserves all raid history and statistics
+
+## Project Structure
+
+Understanding the codebase:
+
+```text
+├── bot.js                 # Main entry point and event handlers
+├── commands/              # Slash command implementations
+│   ├── create.js          # Interactive raid creation flow
+│   ├── raid.js            # Raid management panel
+│   ├── recurring.js       # Recurring raid scheduler
+│   ├── stats.js           # Participation analytics
+│   ├── availability.js    # Availability tracking
+│   └── ...
+├── raids/                 # Raid logic and handlers
+│   ├── reactionHandlers.js  # Signup/waitlist reactions
+│   └── reinitialize.js      # Restore raids on restart
+├── utils/                 # Utility functions
+│   ├── config.js          # Configuration loader
+│   ├── logger.js          # Structured logging
+│   ├── validators.js      # Input validation
+│   ├── rateLimiter.js     # Rate limiting for commands
+│   ├── metrics.js         # Prometheus metrics collection
+│   ├── circuitBreaker.js  # API resilience patterns
+│   ├── alerts.js          # Discord DM-based alerts
+│   └── raidHelpers.js     # Raid formatting and utilities
+├── db/                    # Database layer
+│   ├── database.js        # SQLite connection wrapper
+│   ├── schema.sql         # Database schema definition
+│   └── migrate.js         # JSON to SQLite migration
+├── data/                  # Persistent data (gitignored)
+│   └── wizbot.db          # SQLite database file
+├── state.js               # State management and persistence
+├── presence.js            # Bot status/activity updates
+├── reminderScheduler.js   # Reminder and auto-close logic
+├── auditLog.js            # Audit logging functionality
+├── availabilityManager.js # Availability tracking system
+├── templatesManager.js    # Raid template customization
+└── pollManager.js         # Time slot polling system
+```
+
+## Testing
+
+Run the test suite:
+
+```bash
+npm test
+```
+
+WizBot uses Node.js built-in test runner. Tests cover:
+- Time parsing and natural language dates
+- State persistence and recovery
+- Waitlist promotion logic
+- Reaction handling
+- Rate limiting
+- Timezone conversion
+- Permission validation
+
+## Environment Variables Reference
+
+Complete list of all environment variables:
+
+| Variable | Type | Description | Default | Example |
+|----------|------|-------------|---------|----------|
+| `DISCORD_CLIENT_ID` | String | Bot client ID | Required | `123456789012345678` |
+| `DISCORD_TOKEN` | String | Bot authentication token | Required | `MTIzNDU2Nzg5MDEyMzQ1Njc4.GhIjKl.MnOpQrStUvWxYz` |
+| `DISCORD_ALLOWED_GUILDS` | String | Comma-separated guild IDs | All guilds | `123,456,789` |
+| `BOT_OWNER_ID` | String | User ID for DM alerts | None | `123456789012345678` |
+| `LOG_LEVEL` | String | Logging verbosity | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `LOG_TO_FILE` | Boolean | Enable file logging | `false` | `true`, `false` |
+
+## Deployment
+
+### Running as a Service (Linux)
+
+Create a systemd service file at `/etc/systemd/system/wizbot.service`:
+
+```ini
+[Unit]
+Description=WizBot Discord Raid Manager
+After=network.target
+
+[Service]
+Type=simple
+User=your-username
+WorkingDirectory=/path/to/wizbot
+Environment="NODE_ENV=production"
+EnvironmentFile=/path/to/wizbot/.env
+ExecStart=/usr/bin/node bot.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable and start the service:
+
+```bash
+sudo systemctl enable wizbot
+sudo systemctl start wizbot
+sudo systemctl status wizbot
+```
+
+### Using PM2 (Cross-platform)
+
+[PM2](https://pm2.keymetrics.io/) is a popular process manager for Node.js:
+
+```bash
+npm install -g pm2
+pm2 start bot.js --name wizbot
+pm2 save
+pm2 startup
+```
+
+Monitor the bot:
+
+```bash
+pm2 status
+pm2 logs wizbot
+pm2 monit
+```
+
+### Docker Deployment
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+CMD ["node", "bot.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t wizbot .
+docker run -d \
+  --name wizbot \
+  --env-file .env \
+  -v $(pwd)/data:/app/data \
+  --restart unless-stopped \
+  wizbot
+```
+
+## Performance Monitoring
+
+WizBot includes built-in performance monitoring features:
+
+### DM-Based Alerts
+
+Set `BOT_OWNER_ID` to receive Discord DM alerts for:
+- High latency (>500ms API responses)
+- DM delivery failures
+- Memory usage warnings
+- Circuit breaker state changes
+- Daily health summary (9 AM)
+
+Test the alert system:
+
+```bash
+/testalert
+```
+
+### Metrics Collection
+
+WizBot tracks Prometheus-compatible metrics:
+- Command execution count and duration
+- Reaction handler latency
+- Active raid count
+- Database query performance
+- Memory and CPU usage
+
+Metrics are logged every 5 minutes to the console.
+
+### Graceful Shutdown
+
+WizBot handles `SIGTERM` and `SIGINT` signals gracefully:
+
+1. Saves active raid state to database
+2. Closes Discord connection cleanly
+3. Flushes database writes
+4. Exits with appropriate status code
+
+This ensures no data loss during deployments or restarts.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Bot doesn't respond to commands">
+    - Verify the bot is online in your server
+    - Check that commands are registered with `/ping`
+    - Ensure the bot has appropriate permissions in your server
+    - Check console logs for errors
+  </Accordion>
+
+  <Accordion title="'Channel not configured' error">
+    Use `/setchannel` to configure raid signup channels, or create channels with default names:
+    - `raid-signups`
+    - `museum-signups`
+    - `key-signups`
+    - `challenge-signups`
+  </Accordion>
+
+  <Accordion title="Time parsing isn't working">
+    - Set your server's default timezone with `/settings`
+    - Use explicit formats like "2024-12-25 19:00 EST"
+    - Check that chrono-node is installed: `npm list chrono-node`
+  </Accordion>
+
+  <Accordion title="Database errors on startup">
+    - Ensure the `data/` directory exists and is writable
+    - Check better-sqlite3 compilation: `npm rebuild better-sqlite3`
+    - If migrating, run `node db/migrate.js` separately first
+  </Accordion>
+
+  <Accordion title="High memory usage">
+    - WizBot logs memory warnings automatically
+    - Check for very large guilds (10,000+ members)
+    - Consider increasing Node.js heap size: `node --max-old-space-size=4096 bot.js`
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart Guide"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Learn the essential commands to start managing raids
+  </Card>
+  <Card
+    title="Configuration"
+    icon="gear"
+    href="/configuration"
+  >
+    Customize reminders, permissions, templates, and server settings
+  </Card>
+  <Card
+    title="Commands Reference"
+    icon="terminal"
+    href="/commands"
+  >
+    Complete documentation for all available commands
+  </Card>
+  <Card
+    title="Advanced Features"
+    icon="wand-magic-sparkles"
+    href="/advanced"
+  >
+    Explore recurring raids, availability tracking, and analytics
+  </Card>
+</CardGroup>

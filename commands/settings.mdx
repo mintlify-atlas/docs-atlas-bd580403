@@ -1,0 +1,266 @@
+---
+title: /settings
+description: Interactive panel for reminders, auto-close, threads, and other server options
+---
+
+The `/settings` command opens an interactive panel to configure bot behavior including reminders, auto-close timing, discussion threads, raid leader markers, and default timezone.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/settings
+```
+
+## Settings Panel
+
+The panel shows current configuration and provides controls to adjust:
+
+### Creator Reminders
+
+**What it does:**
+Sends a DM to the raid creator before the raid starts.
+
+**Options:**
+- **Disabled** (default)
+- **5, 10, 15, 30, or 60 minutes** before raid time
+
+**Toggle button:** Turn on/off
+**Timing dropdown:** Select when to send
+
+**Example DM:**
+```
+⏰ Raid Starting Soon!
+
+Your Dragonspyre (Voracious Void) raid starts in 15 minutes.
+
+Raid ID: ABC123
+[Jump to Signup](https://discord.com/...)
+
+Current signups: 12/12 (Full)
+```
+
+### Participant Reminders
+
+**What it does:**
+Sends a DM to all signed-up participants before the raid starts.
+
+**Options:**
+- **Disabled** (default)
+- **5, 10, 15, 30, or 60 minutes** before raid time
+
+**Toggle button:** Turn on/off
+**Timing dropdown:** Select when to send
+
+**Example DM:**
+```
+⏰ Raid Starting Soon!
+
+The Dragonspyre (Voracious Void) raid you signed up for starts in 30 minutes.
+
+Your role: Storm 1
+Raid ID: ABC123
+[Jump to Signup](https://discord.com/...)
+```
+
+<Note>
+Participants who have DMs disabled won't receive reminders. Failed DM deliveries are logged to the debug channel.
+</Note>
+
+### Auto-Close Full Raids
+
+**What it does:**
+Automatically closes full raids at a specified time before raid start.
+
+**Options:**
+- **Disabled** (default)
+- **15, 30, 60 minutes**
+- **2, 8, or 24 hours** before raid time
+
+**Toggle button:** Turn on/off
+**Timing dropdown:** Select when to auto-close
+
+**Behavior:**
+- Only closes raids that are 100% full
+- Sends notification to creator
+- Updates signup embed to show "Closed" status
+- Prevents new signups after auto-close
+
+**Use case:**
+"Lock in" the roster 1 hour before raid time to prevent last-minute changes.
+
+### Discussion Threads
+
+**What it does:**
+Automatically creates a discussion thread for each raid signup.
+
+**Options:**
+- **Enabled** - Creates threads
+- **Disabled** (default) - No threads
+
+**Toggle button:** Turn on/off
+
+**When enabled:**
+- Thread is created when raid signup is posted
+- Thread name: `[Template Name] - [Raid ID]`
+- Initial message in thread shows raid details and time
+- Auto-archive after server default (usually 24 hours)
+
+**Example thread:**
+```
+Thread: Dragonspyre - ABC123
+
+💬 Discussion thread for Dragonspyre (Voracious Void) (ID: ABC123)
+⏰ Raid time: <t:1234567890:F>
+```
+
+### Raid Leader Role
+
+**What it does:**
+Marks users with a specific role on raid signups with a ⭐ star.
+
+**Options:**
+- **None** (default) - No marker
+- **Select a role** - Users with this role get ⭐
+
+**Role selector:** Choose from server roles
+
+**Example:**
+If "Raid Leader" role is selected:
+```
+1️⃣ Storm 1: @Player1 ⭐
+2️⃣ Storm 2: @Player2
+3️⃣ Storm 3: @Player3
+```
+
+### Default Timezone
+
+**What it does:**
+Sets the timezone used for parsing natural language times.
+
+**Options:**
+- Any IANA timezone (e.g., `America/New_York`, `America/Chicago`, `Europe/London`)
+- Default: `America/New_York`
+
+**Button:** Opens modal to enter timezone
+
+**Used by:**
+- [/create](/commands/create) when parsing raid times
+- [/recurring](/commands/recurring) for recurring schedules
+- [/poll](/commands/poll) for poll options
+
+**Valid formats:**
+- `America/New_York`
+- `America/Chicago`
+- `America/Los_Angeles`
+- `Europe/London`
+- `Asia/Tokyo`
+
+## Settings Summary
+
+The panel displays current settings:
+
+```
+ServerName • Settings
+
+Configure reminders, auto-close timing, threads, and an
+optional raid leader marker.
+
+Creator reminders: 15 min before start
+Participant reminders: 30 min before start
+Auto-close full raids: 60 min before start
+Discussion threads: Enabled (auto-created per raid)
+Raid leader role: @Raid Leader (⭐ on signups)
+Default timezone: America/New_York
+```
+
+## Interactive Controls
+
+**Row 1: Toggle Buttons**
+- Creator: On/Off
+- Participant: On/Off
+- Auto-close: On/Off
+- Threads: On/Off
+- TZ: [Current timezone abbreviation]
+
+**Row 2: Creator Reminder Timing**
+- Dropdown: Disabled, 5 min, 10 min, 15 min, 30 min, 60 min
+
+**Row 3: Participant Reminder Timing**
+- Dropdown: Disabled, 5 min, 10 min, 15 min, 30 min, 60 min
+
+**Row 4: Auto-Close Timing**
+- Dropdown: Disabled, 15 min, 30 min, 60 min, 2 hours, 8 hours, 24 hours
+
+**Row 5: Raid Leader Role**
+- Role selector: Choose from server roles (or clear to remove)
+
+## Examples
+
+<CodeGroup>
+```text Enable 30-Minute Reminders
+/settings
+→ Click "Participant: Off" (toggles to On)
+→ Select "30 min" from Participant dropdown
+→ Participants will get DMs 30 minutes before raids
+```
+
+```text Auto-Close 1 Hour Before
+/settings
+→ Click "Auto-close: Off" (toggles to On)
+→ Select "60 min" from Auto-close dropdown
+→ Full raids will auto-close 1 hour before start
+```
+
+```text Enable Threads
+/settings
+→ Click "Threads: Off" (toggles to On)
+→ Future raids will have discussion threads
+```
+
+```text Set Raid Leader Role
+/settings
+→ Use Role selector (Row 5)
+→ Select "@Raid Leader" role
+→ Users with this role get ⭐ on signups
+```
+
+```text Change Timezone
+/settings
+→ Click "TZ: New York" button
+→ Enter "America/Chicago" in modal
+→ Bot now parses times as Central time
+```
+</CodeGroup>
+
+## Best Practices
+
+**Reminders:**
+- Use 30-60 minute reminders for scheduled raids
+- Shorter (5-15 min) for last-minute raids
+- Test with yourself first to verify DMs work
+
+**Auto-Close:**
+- Set to 1-2 hours for organized groups
+- Disable for casual/flexible groups
+- Remember: only closes **full** raids
+
+**Threads:**
+- Enable for active communities with lots of raid discussion
+- Disable if your server prefers single-channel chat
+- Threads auto-archive after 24 hours by default
+
+**Raid Leader:**
+- Use for recognizing experienced raid leaders
+- Helps new members identify who to ask questions
+- Visual indicator on all raid signups
+
+## Related Commands
+
+- [/setchannel](/commands/setchannel) - Configure where signups are posted
+- [/create](/commands/create) - Create raids (uses timezone setting)
+- [/recurring](/commands/recurring) - Recurring raids (uses timezone setting)
+- [/permissions](/commands/permissions) - Configure command permissions

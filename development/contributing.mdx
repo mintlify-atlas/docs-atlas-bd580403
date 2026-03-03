@@ -1,0 +1,699 @@
+---
+title: Contributing Guide
+description: Learn how to contribute to RaidBot development
+---
+
+## Welcome Contributors
+
+Thank you for your interest in contributing to RaidBot! This guide will help you get started with development, code standards, and the contribution process.
+
+## Getting Started
+
+### Prerequisites
+
+<Steps>
+  <Step title="Install Node.js">
+    RaidBot requires Node.js 18 or higher.
+    
+    ```bash
+    node --version
+    # Should output v18.0.0 or higher
+    ```
+    
+    Download from [nodejs.org](https://nodejs.org/)
+  </Step>
+  
+  <Step title="Install Git">
+    ```bash
+    git --version
+    ```
+    
+    Download from [git-scm.com](https://git-scm.com/)
+  </Step>
+  
+  <Step title="Create Discord Bot">
+    1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Create a new application
+    3. Go to "Bot" section and create a bot
+    4. Copy the bot token (you'll need this later)
+    5. Enable these intents:
+       - Server Members Intent
+       - Message Content Intent
+  </Step>
+</Steps>
+
+### Clone and Setup
+
+<CodeGroup>
+```bash Fork and Clone
+# Fork the repository on GitHub first, then:
+git clone https://github.com/YOUR_USERNAME/wizbot.git
+cd wizbot
+```
+
+```bash Install Dependencies
+npm install
+```
+
+```bash Configure Bot
+# Copy example config
+cp config.example.json config.json
+
+# Edit config.json with your credentials
+{
+  "clientId": "YOUR_CLIENT_ID",
+  "token": "YOUR_BOT_TOKEN",
+  "allowedGuildIds": ["YOUR_TEST_GUILD_ID"],
+  "ownerId": "YOUR_USER_ID"
+}
+```
+
+```bash Run Bot
+node bot.js
+```
+</CodeGroup>
+
+<Info>
+Use `allowedGuildIds` to restrict the bot to your test server during development.
+</Info>
+
+### Development Environment
+
+Recommended tools:
+
+- **Editor:** VS Code with ESLint extension
+- **Terminal:** Any modern terminal with Node.js support
+- **Git Client:** Command line or GitHub Desktop
+- **Discord:** Desktop app for testing
+
+## Code Standards
+
+### Style Guide
+
+RaidBot follows JavaScript Standard Style with some modifications.
+
+<AccordionGroup>
+  <Accordion title="Indentation and Formatting">
+    - Use 4 spaces for indentation (not tabs)
+    - No semicolons (except where required)
+    - Single quotes for strings
+    - Max line length: 120 characters
+    
+    ```javascript
+    // Good
+    const message = 'Hello world'
+    const user = await client.users.fetch(userId)
+    
+    // Bad
+    const message = "Hello world";
+    const user=await client.users.fetch(userId);
+    ```
+  </Accordion>
+  
+  <Accordion title="Naming Conventions">
+    - **Variables/Functions:** camelCase
+    - **Constants:** UPPER_SNAKE_CASE
+    - **Classes:** PascalCase
+    - **Files:** camelCase or kebab-case
+    
+    ```javascript
+    // Variables and functions
+    const raidData = getRaidData(messageId)
+    function calculateStats(userId) { }
+    
+    // Constants
+    const MAX_RAID_SIZE = 50
+    const DEFAULT_TIMEOUT_MS = 30000
+    
+    // Classes
+    class RateLimiter { }
+    class CircuitBreaker { }
+    ```
+  </Accordion>
+  
+  <Accordion title="Documentation">
+    Add JSDoc comments for public functions:
+    
+    ```javascript
+    /**
+     * Calculate user statistics for a guild
+     * @param {string} guildId - Discord guild ID
+     * @param {string} userId - Discord user ID
+     * @returns {Object} Statistics object with raid counts and roles
+     */
+    function getUserStats(guildId, userId) {
+        // Implementation
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    Always handle errors gracefully:
+    
+    ```javascript
+    // Good
+    try {
+        const message = await channel.messages.fetch(messageId)
+        await message.edit({ embeds: [embed] })
+    } catch (error) {
+        logger.error('Failed to update raid embed', {
+            error,
+            messageId,
+            channelId: channel.id
+        })
+        // Graceful fallback or user notification
+    }
+    
+    // Bad
+    const message = await channel.messages.fetch(messageId)
+    await message.edit({ embeds: [embed] }) // No error handling
+    ```
+  </Accordion>
+  
+  <Accordion title="Async/Await">
+    Prefer async/await over Promise chains:
+    
+    ```javascript
+    // Good
+    async function createRaid(interaction) {
+        const channel = await getChannel(channelId)
+        const message = await channel.send({ embeds: [embed] })
+        await addReactions(message)
+    }
+    
+    // Bad
+    function createRaid(interaction) {
+        return getChannel(channelId)
+            .then(channel => channel.send({ embeds: [embed] }))
+            .then(message => addReactions(message))
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Project Conventions
+
+<ResponseField name="Logging" type="convention">
+  Use the structured logger for all logging:
+  
+  ```javascript
+  const { logger } = require('./utils/logger')
+  
+  logger.info('Raid created', { raidId, guildId, userId })
+  logger.warn('Rate limit approaching', { userId, requests })
+  logger.error('Database error', { error, context: 'saveRaid' })
+  ```
+  
+  **Never use `console.log()` in production code.**
+</ResponseField>
+
+<ResponseField name="Database Access" type="convention">
+  Always use prepared statements:
+  
+  ```javascript
+  // Good
+  const stmt = prepare('SELECT * FROM raids WHERE guild_id = ?')
+  const raids = stmt.all(guildId)
+  
+  // Bad - SQL injection risk
+  const raids = db.prepare(`SELECT * FROM raids WHERE guild_id = '${guildId}'`).all()
+  ```
+</ResponseField>
+
+<ResponseField name="State Management" type="convention">
+  Use state.js functions for all state operations:
+  
+  ```javascript
+  const { setActiveRaid, getActiveRaid, deleteActiveRaid } = require('./state')
+  
+  // Don't directly manipulate activeRaids Map
+  // Use the provided functions instead
+  setActiveRaid(messageId, raidData)
+  ```
+</ResponseField>
+
+<ResponseField name="Discord API Calls" type="convention">
+  Wrap Discord API calls with circuit breaker:
+  
+  ```javascript
+  const { fetchWithBreaker, sendDMWithBreaker } = require('./utils/circuitBreaker')
+  
+  const user = await fetchWithBreaker(
+      () => client.users.fetch(userId),
+      null // fallback value
+  )
+  
+  const sent = await sendDMWithBreaker(user, 'Message content')
+  ```
+</ResponseField>
+
+## Development Workflow
+
+### Feature Development
+
+<Steps>
+  <Step title="Create feature branch">
+    ```bash
+    git checkout -b feature/my-new-feature
+    ```
+    
+    Branch naming:
+    - `feature/` - New features
+    - `fix/` - Bug fixes
+    - `refactor/` - Code improvements
+    - `docs/` - Documentation updates
+  </Step>
+  
+  <Step title="Write tests first (TDD)">
+    ```javascript tests/myFeature.test.js
+    const test = require('node:test')
+    const assert = require('node:assert/strict')
+    
+    test('should do something useful', () => {
+        const result = myNewFunction()
+        assert.equal(result, expected)
+    })
+    ```
+    
+    See the [Testing Guide](/development/testing) for details.
+  </Step>
+  
+  <Step title="Implement feature">
+    Write the minimum code to make tests pass.
+    
+    ```javascript utils/myFeature.js
+    /**
+     * Brief description of what this does
+     * @param {string} input - Description
+     * @returns {string} Description
+     */
+    function myNewFunction(input) {
+        // Implementation
+    }
+    
+    module.exports = { myNewFunction }
+    ```
+  </Step>
+  
+  <Step title="Test thoroughly">
+    ```bash
+    # Run tests
+    npm test
+    
+    # Test in Discord
+    node bot.js
+    # Use your test server to verify functionality
+    ```
+  </Step>
+  
+  <Step title="Commit changes">
+    ```bash
+    git add .
+    git commit -m "feat: add new feature for X"
+    ```
+    
+    Use [Conventional Commits](https://www.conventionalcommits.org/):
+    - `feat:` - New feature
+    - `fix:` - Bug fix
+    - `refactor:` - Code refactoring
+    - `docs:` - Documentation
+    - `test:` - Test changes
+    - `chore:` - Maintenance
+  </Step>
+</Steps>
+
+### Commit Message Format
+
+```
+type(scope): brief description
+
+Longer explanation if needed.
+Explain WHY this change was made, not WHAT was changed.
+
+Fixes #123
+```
+
+**Examples:**
+
+```bash
+feat(raids): add automatic waitlist promotion
+
+When a user removes their signup, the next person on the waitlist
+is automatically promoted and notified via DM.
+
+Fixes #45
+```
+
+```bash
+fix(database): prevent race condition in concurrent signups
+
+Added mutex locks per raid to ensure atomic signup operations.
+This prevents duplicate signups when multiple users react simultaneously.
+
+Fixes #67
+```
+
+```bash
+refactor(logger): switch to structured logging
+
+Replaced console.log calls with structured logger for better
+production debugging and log aggregation.
+```
+
+## Pull Request Process
+
+### Before Submitting
+
+<Checklist>
+  - [ ] All tests pass (`npm test`)
+  - [ ] No console.log() in production code
+  - [ ] Code follows style guide
+  - [ ] Functions have JSDoc comments
+  - [ ] Changes tested in Discord
+  - [ ] Database migrations added (if needed)
+  - [ ] README updated (if needed)
+</Checklist>
+
+### Submit Pull Request
+
+<Steps>
+  <Step title="Push to your fork">
+    ```bash
+    git push origin feature/my-new-feature
+    ```
+  </Step>
+  
+  <Step title="Create PR on GitHub">
+    1. Go to the original repository
+    2. Click "New Pull Request"
+    3. Select your branch
+    4. Fill out the PR template
+  </Step>
+  
+  <Step title="PR Description Template">
+    ```markdown
+    ## Description
+    Brief description of what this PR does.
+    
+    ## Changes
+    - Added X feature
+    - Fixed Y bug
+    - Refactored Z module
+    
+    ## Testing
+    - [ ] Unit tests added/updated
+    - [ ] Tested in Discord server
+    - [ ] Edge cases covered
+    
+    ## Screenshots
+    (If UI changes, add screenshots)
+    
+    ## Related Issues
+    Fixes #123
+    Related to #456
+    ```
+  </Step>
+  
+  <Step title="Address review feedback">
+    Make requested changes and push updates:
+    
+    ```bash
+    git add .
+    git commit -m "fix: address review feedback"
+    git push origin feature/my-new-feature
+    ```
+  </Step>
+</Steps>
+
+### PR Review Checklist
+
+Reviewers will check:
+
+- Code quality and readability
+- Test coverage
+- Error handling
+- Performance implications
+- Security considerations
+- Documentation completeness
+
+## Common Contributions
+
+### Adding a New Command
+
+<Steps>
+  <Step title="Create command file">
+    ```javascript commands/mycommand.js
+    const { SlashCommandBuilder } = require('discord.js')
+    
+    module.exports = {
+        data: new SlashCommandBuilder()
+            .setName('mycommand')
+            .setDescription('What this command does'),
+        requiresManageGuild: true, // Optional
+        async execute(interaction) {
+            // Implementation
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Register in index.js">
+    ```javascript commands/index.js
+    module.exports = [
+        require('./availability'),
+        require('./create'),
+        require('./mycommand'), // Add here
+        // ...
+    ]
+    ```
+  </Step>
+  
+  <Step title="Add tests">
+    ```javascript tests/mycommand.test.js
+    const test = require('node:test')
+    const assert = require('node:assert/strict')
+    const { execute } = require('../commands/mycommand')
+    
+    test('should handle valid input', async () => {
+        // Test implementation
+    })
+    ```
+  </Step>
+</Steps>
+
+### Adding a Database Migration
+
+<Steps>
+  <Step title="Add migration to runMigrations()">
+    ```javascript db/database.js
+    const migrations = [
+        // Existing migrations...
+        { 
+            table: 'raids', 
+            column: 'my_new_column', 
+            sql: 'ALTER TABLE raids ADD COLUMN my_new_column TEXT' 
+        }
+    ]
+    ```
+  </Step>
+  
+  <Step title="Update schema.sql">
+    ```sql db/schema.sql
+    CREATE TABLE IF NOT EXISTS raids (
+      message_id TEXT PRIMARY KEY,
+      -- existing columns...
+      my_new_column TEXT
+    );
+    ```
+  </Step>
+  
+  <Step title="Test migration">
+    ```bash
+    # Delete test database
+    rm data/wizbot.db*
+    
+    # Restart bot to run migrations
+    node bot.js
+    
+    # Verify schema
+    sqlite3 data/wizbot.db "PRAGMA table_info(raids);"
+    ```
+  </Step>
+</Steps>
+
+### Fixing a Bug
+
+<Steps>
+  <Step title="Write failing test">
+    Reproduce the bug in a test:
+    
+    ```javascript tests/bugfix.test.js
+    test('should handle edge case correctly', () => {
+        // This test should fail initially
+        const result = functionWithBug(edgeCase)
+        assert.equal(result, expected)
+    })
+    ```
+  </Step>
+  
+  <Step title="Fix the bug">
+    Make the minimal change to fix the issue:
+    
+    ```javascript
+    function functionWithBug(input) {
+        // Add null check
+        if (!input) return null
+        
+        // Rest of logic
+    }
+    ```
+  </Step>
+  
+  <Step title="Verify fix">
+    ```bash
+    npm test
+    # All tests should pass
+    ```
+  </Step>
+</Steps>
+
+## Issue Guidelines
+
+### Reporting Bugs
+
+Use the bug report template:
+
+```markdown
+**Description**
+Clear description of the bug.
+
+**Steps to Reproduce**
+1. Run command `/create`
+2. Enter invalid date
+3. See error
+
+**Expected Behavior**
+Should show helpful error message.
+
+**Actual Behavior**
+Bot crashes with unhandled exception.
+
+**Environment**
+- Node.js version: v20.0.0
+- Discord.js version: 14.24.2
+- Operating System: Ubuntu 22.04
+
+**Logs**
+```
+[2026-03-03T10:30:00] [ERROR] Unhandled error...
+```
+```
+
+### Feature Requests
+
+```markdown
+**Feature Description**
+Clear description of the proposed feature.
+
+**Use Case**
+Who would benefit and how?
+
+**Proposed Implementation**
+(Optional) How you think it could work.
+
+**Alternatives Considered**
+Other solutions you thought about.
+```
+
+## Code Review
+
+### What We Look For
+
+<AccordionGroup>
+  <Accordion title="Correctness">
+    - Does the code do what it's supposed to?
+    - Are edge cases handled?
+    - Are there any logic errors?
+  </Accordion>
+  
+  <Accordion title="Testing">
+    - Are there tests for new functionality?
+    - Do tests cover edge cases?
+    - Do all tests pass?
+  </Accordion>
+  
+  <Accordion title="Readability">
+    - Is the code easy to understand?
+    - Are variable names descriptive?
+    - Is the logic clear and simple?
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Are there any performance concerns?
+    - Could this cause memory leaks?
+    - Are database queries optimized?
+  </Accordion>
+  
+  <Accordion title="Security">
+    - Are user inputs validated?
+    - Are SQL queries using prepared statements?
+    - Are Discord permissions checked?
+  </Accordion>
+</AccordionGroup>
+
+### Giving Feedback
+
+When reviewing code:
+
+- Be respectful and constructive
+- Explain WHY something should change
+- Suggest alternatives when criticizing
+- Acknowledge good solutions
+
+**Good feedback:**
+> Consider using a Map instead of an array here for O(1) lookups. With 100+ raids, the array.find() could become a bottleneck.
+
+**Bad feedback:**
+> This is slow, use a Map.
+
+## Community
+
+### Getting Help
+
+- **Documentation:** Start with these developer guides
+- **Issues:** Search existing issues on GitHub
+- **Discord:** Join the community server (link in README)
+
+### Recognition
+
+Contributors are recognized in:
+- GitHub contributors page
+- Release notes for significant contributions
+- In-bot `/changelog` command
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the ISC License.
+
+---
+
+## Quick Reference
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the system design
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Navigate the codebase
+  </Card>
+  <Card title="Testing Guide" icon="flask" href="/development/testing">
+    Write and run tests
+  </Card>
+  <Card title="Commands Reference" icon="terminal" href="/commands/overview">
+    See all available commands
+  </Card>
+</CardGroup>
+
+## Thank You
+
+Thank you for contributing to RaidBot! Every contribution, whether it's code, documentation, bug reports, or feature requests, helps make the bot better for everyone.

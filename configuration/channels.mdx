@@ -1,0 +1,232 @@
+---
+title: Channel Configuration
+description: Set up posting channels for raid signups, museum runs, and logs
+---
+
+RaidBot needs to know where to post different types of signups. Use the `/setchannel` command to configure channel destinations for each signup type.
+
+## Channel Types
+
+RaidBot supports multiple channel destinations for different raid types and logging:
+
+<CardGroup cols={2}>
+  <Card title="Raid Channel" icon="swords">
+    Where standard raid signups are posted (Dragonspyre, Lemuria, Polaris, etc.)
+  </Card>
+  <Card title="Museum Channel" icon="building-columns">
+    Where museum run signups are posted
+  </Card>
+  <Card title="Key Boss Channel" icon="key">
+    Where gold key boss signups are posted
+  </Card>
+  <Card title="Challenge Channel" icon="shield-halved">
+    Where challenge mode signups are posted
+  </Card>
+  <Card title="Audit Log Channel" icon="list-check">
+    Where audit logs for raid actions are recorded
+  </Card>
+  <Card title="Debug Log Channel" icon="bug">
+    Where debug logs and errors are sent for troubleshooting
+  </Card>
+</CardGroup>
+
+## Using /setchannel
+
+The `/setchannel` command provides an interactive panel to configure all channels at once, or you can set specific channels directly using command options.
+
+### Interactive Mode
+
+Run `/setchannel` without options to open an interactive configuration panel:
+
+```
+/setchannel
+```
+
+This opens an embed showing current channel configurations with dropdown menus to select new channels for each type.
+
+<Note>
+  The interactive panel times out after 5 minutes of inactivity (commands/setchannel.js:98).
+</Note>
+
+### Direct Channel Setting
+
+Set specific channels directly using command options:
+
+<CodeGroup>
+```
+/setchannel raid_channel:#raid-signups
+```
+
+```
+/setchannel museum_channel:#museum-runs
+```
+
+```
+/setchannel key_channel:#key-boss
+```
+
+```
+/setchannel challenge_channel:#challenge-mode
+```
+
+```
+/setchannel audit_channel:#bot-audit
+```
+
+```
+/setchannel debug_channel:#bot-debug
+```
+</CodeGroup>
+
+### Setting Multiple Channels
+
+You can set multiple channels in one command:
+
+```
+/setchannel raid_channel:#raid-signups museum_channel:#museum-runs audit_channel:#logs
+```
+
+## Command Options
+
+<ParamField path="raid_channel" type="channel">
+  Text channel where raid signups will be posted. Created via `/create` for raid type.
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:21)
+</ParamField>
+
+<ParamField path="museum_channel" type="channel">
+  Text channel where museum run signups will be posted. Created via `/create` for museum type.
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:26)
+</ParamField>
+
+<ParamField path="key_channel" type="channel">
+  Text channel where gold key boss signups will be posted.
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:31)
+</ParamField>
+
+<ParamField path="challenge_channel" type="channel">
+  Text channel where challenge mode signups will be posted.
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:36)
+</ParamField>
+
+<ParamField path="audit_channel" type="channel">
+  Text channel for audit logs tracking:
+  - Raid creation and deletion
+  - Signup modifications
+  - Permission changes
+  - Admin actions
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:41)
+</ParamField>
+
+<ParamField path="debug_channel" type="channel">
+  Text channel for debug logs including:
+  - Error messages
+  - Performance warnings
+  - Rate limit alerts
+  - System diagnostics
+  
+  **Requirements:** Must be a text channel (commands/setchannel.js:46)
+  
+  <Tip>
+    Debug logging is useful for troubleshooting but can be verbose. Consider a private admin-only channel.
+  </Tip>
+</ParamField>
+
+## Channel Status
+
+After setting channels, the bot displays current configuration:
+
+```
+Channels updated.
+Raid: #raid-signups
+Museum: #museum-runs
+Key: #key-boss
+Challenge: #challenge-mode
+Audit: #bot-audit
+Debug: Not set
+```
+
+<Note>
+  Channels marked as "Not set" are optional. Signups for those types will fail until a channel is configured.
+</Note>
+
+## Permissions Required
+
+The bot needs these permissions in configured channels:
+
+<AccordionGroup>
+  <Accordion title="Signup Channels (Raid, Museum, Key, Challenge)">
+    - **View Channel** — To access the channel
+    - **Send Messages** — To post signup embeds
+    - **Embed Links** — For rich signup displays
+    - **Add Reactions** — To add role reaction buttons
+    - **Manage Messages** — To update and delete signups
+    - **Read Message History** — To track existing signups
+  </Accordion>
+
+  <Accordion title="Audit & Debug Channels">
+    - **View Channel** — To access the channel
+    - **Send Messages** — To post log entries
+    - **Embed Links** — For formatted log messages
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+  If the bot lacks required permissions, signup creation will fail. Ensure the bot's role is positioned above channel permission overrides.
+</Warning>
+
+## Data Storage
+
+Channel configurations are stored per-guild in the database (state.js:216-307):
+
+- **Raid channels:** `guilds.raid_channel_id`
+- **Museum channels:** `guilds.museum_channel_id`
+- **Key channels:** `guilds.key_channel_id`
+- **Challenge channels:** `guilds.challenge_channel_id`
+- **Audit channels:** `guilds.audit_channel_id`
+
+Changes are persisted immediately to the SQLite database.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Signups not appearing">
+    1. Verify the correct channel is set with `/setchannel`
+    2. Check bot permissions in the target channel
+    3. Ensure the channel is a text channel (not voice/announcement)
+    4. Check debug logs if debug channel is configured
+  </Accordion>
+
+  <Accordion title="Cannot select channel in dropdown">
+    - The channel must be a text channel
+    - You must have "Manage Server" permission
+    - The bot must have access to view the channel
+  </Accordion>
+
+  <Accordion title="Channel configuration not saving">
+    - Ensure you're not timing out (5 minute limit)
+    - Check that the database is writable
+    - Verify no errors in debug channel
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Separate Channels" icon="objects-column">
+    Use different channels for raid types to keep signups organized and reduce clutter.
+  </Card>
+  <Card title="Archive Old Signups" icon="box-archive">
+    Consider auto-archiving completed raids using Discord's thread feature (see [Settings](/configuration/settings)).
+  </Card>
+  <Card title="Private Logs" icon="lock">
+    Keep audit and debug channels private to prevent spam and protect sensitive information.
+  </Card>
+  <Card title="Clear Names" icon="tag">
+    Use descriptive channel names like `#raid-signups` instead of `#raids` for clarity.
+  </Card>
+</CardGroup>

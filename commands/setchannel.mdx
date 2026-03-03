@@ -1,0 +1,208 @@
+---
+title: /setchannel
+description: Configure posting channels for raid, museum, key, and challenge signups
+---
+
+The `/setchannel` command provides an interactive interface to configure where the bot posts different types of signups and logs.
+
+<Note>
+Requires Manage Server permission or a configured admin role.
+</Note>
+
+## Command Signature
+
+```
+/setchannel [raid_channel:<#channel>] [museum_channel:<#channel>] [key_channel:<#channel>] [challenge_channel:<#channel>] [audit_channel:<#channel>] [debug_channel:<#channel>]
+```
+
+<ParamField path="raid_channel" type="channel">
+  Channel for standard raid signups (Dragonspyre, Lemuria, Polaris, etc.)
+</ParamField>
+
+<ParamField path="museum_channel" type="channel">
+  Channel for museum signups
+</ParamField>
+
+<ParamField path="key_channel" type="channel">
+  Channel for gold key boss signups
+</ParamField>
+
+<ParamField path="challenge_channel" type="channel">
+  Channel for challenge mode signups
+</ParamField>
+
+<ParamField path="audit_channel" type="channel">
+  Channel for audit logs (raid actions, admin changes)
+</ParamField>
+
+<ParamField path="debug_channel" type="channel">
+  Channel for debug logs (errors, performance monitoring)
+</ParamField>
+
+## Interactive Mode
+
+Running `/setchannel` without parameters opens an interactive panel:
+
+```
+/setchannel
+```
+
+The panel shows:
+1. **Current settings** for all channel types
+2. **Channel selectors** to update each type
+3. Real-time updates as you select channels
+
+## Direct Mode
+
+You can also set channels directly:
+
+```
+/setchannel raid_channel:#raid-signups museum_channel:#museum-signups
+```
+
+This immediately updates the specified channels and shows a confirmation.
+
+## Channel Types
+
+<Tabs>
+  <Tab title="Raid Channel">
+    Where standard raid signups are posted.
+    
+    **Used for:**
+    - Dragonspyre (Voracious Void)
+    - Lemuria (Ghastly Conspiracy)
+    - Polaris (Cabal's Revenge)
+    - Any custom raid templates
+    
+    **Fallback:**
+    If not set, bot looks for a channel named `raid-signups`.
+  </Tab>
+  <Tab title="Museum Channel">
+    Where museum signups are posted.
+    
+    **Used for:**
+    - Museum Signup activity type
+    
+    **Fallback:**
+    If not set, bot looks for a channel named `museum-signups`.
+  </Tab>
+  <Tab title="Key Channel">
+    Where gold key boss signups are posted.
+    
+    **Used for:**
+    - Gold Key Boss activity type
+    
+    **Fallback:**
+    If not set, bot looks for a channel named `key-signups`.
+  </Tab>
+  <Tab title="Challenge Channel">
+    Where challenge mode signups are posted.
+    
+    **Used for:**
+    - Challenge Mode activity type
+    
+    **Fallback:**
+    If not set, bot looks for a channel named `challenge-signups`.
+  </Tab>
+  <Tab title="Audit Channel">
+    Where administrative actions are logged.
+    
+    **Logs include:**
+    - Raid created/closed/deleted
+    - Signups manually added/removed
+    - Time changes
+    - No-shows marked
+    - Recurring schedule changes
+    - Settings updates
+    - Permission changes
+    
+    **Fallback:**
+    If not set, audit logs are not sent.
+  </Tab>
+  <Tab title="Debug Channel">
+    Where technical logs are sent.
+    
+    **Logs include:**
+    - Performance alerts (high latency, memory issues)
+    - Error reports
+    - Circuit breaker states
+    - DM delivery failures
+    - Daily health summaries (9 AM)
+    
+    **Fallback:**
+    If not set, debug logs are not sent.
+    
+    <Note>
+    Requires `BOT_OWNER_ID` environment variable to be set for alerts.
+    </Note>
+  </Tab>
+</Tabs>
+
+## Default Channel Names
+
+If channels aren't explicitly configured, the bot searches for these names:
+
+- **Raid:** `raid-signups`
+- **Museum:** `museum-signups`
+- **Key:** `key-signups`
+- **Challenge:** `challenge-signups`
+
+Create channels with these exact names, and the bot will automatically use them.
+
+## Changing Channels
+
+You can change channels at any time:
+- New signups will use the new channel
+- Existing signups remain in their original channels
+- Recurring raids will spawn in the new channel
+
+## Verification
+
+After setting channels, verify with:
+- Try creating a test raid with [/create](/commands/create)
+- Check that audit logs appear in the audit channel
+- Confirm signups post to the correct channels
+
+## Examples
+
+<CodeGroup>
+```text Interactive Setup
+/setchannel
+→ Select raid channel: #raid-signups
+→ Select museum channel: #museum-runs
+→ Select audit channel: #bot-logs
+→ Select debug channel: #bot-debug
+```
+
+```text Direct Setup
+/setchannel raid_channel:#raid-signups audit_channel:#bot-logs
+```
+
+```text Check Current Settings
+/setchannel
+→ View current channel configuration in the panel
+```
+</CodeGroup>
+
+## Permissions
+
+The bot needs these permissions in the configured channels:
+
+**Signup Channels:**
+- View Channel
+- Send Messages
+- Embed Links
+- Add Reactions
+- Read Message History
+- Create Public Threads (if threads are enabled)
+
+**Audit/Debug Channels:**
+- View Channel
+- Send Messages
+- Embed Links
+
+## Related Commands
+
+- [/create](/commands/create) - Create signups (posts to configured channels)
+- [/settings](/commands/settings) - Configure other bot settings
+- [/permissions](/commands/permissions) - Configure who can use commands

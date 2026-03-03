@@ -1,0 +1,138 @@
+---
+title: Initial Setup
+description: Configure RaidBot with environment variables and config files
+---
+
+RaidBot can be configured using either a `config.json` file or environment variables. Environment variables take precedence over config file values.
+
+## Environment Variables
+
+The bot uses environment variables for core configuration. Create a `.env` file in the root directory or set these variables in your hosting environment.
+
+<ParamField path="DISCORD_CLIENT_ID" type="string" required>
+  Your Discord application client ID. Find this in the Discord Developer Portal under your application's OAuth2 settings.
+</ParamField>
+
+<ParamField path="DISCORD_TOKEN" type="string" required>
+  Your Discord bot token. Keep this secret and never commit it to version control.
+  
+  <Warning>
+    Never share your bot token. If exposed, regenerate it immediately in the Discord Developer Portal.
+  </Warning>
+</ParamField>
+
+<ParamField path="DISCORD_ALLOWED_GUILDS" type="string">
+  Comma-separated list of guild (server) IDs where the bot is allowed to operate. Leave empty to allow all guilds.
+  
+  **Example:**
+  ```bash
+  DISCORD_ALLOWED_GUILDS="123456789012345678,987654321098765432"
+  ```
+</ParamField>
+
+<ParamField path="BOT_OWNER_ID" type="string">
+  Discord user ID of the bot owner. Required for receiving DM-based performance alerts and admin commands.
+</ParamField>
+
+<ParamField path="RESTRICTED_MESSAGE" type="string" default="This bot is not authorized for this server.">
+  Custom message shown when the bot is used in an unauthorized server (when `DISCORD_ALLOWED_GUILDS` is set).
+</ParamField>
+
+<ParamField path="LOG_LEVEL" type="string" default="INFO">
+  Logging verbosity level. Options: `DEBUG`, `INFO`, `WARN`, `ERROR`
+</ParamField>
+
+<ParamField path="LOG_TO_FILE" type="boolean" default="false">
+  Enable file-based logging in addition to console output.
+</ParamField>
+
+## Configuration File
+
+Alternatively, create a `config.json` file in the root directory:
+
+<CodeGroup>
+```json config.json
+{
+  "clientId": "YOUR_CLIENT_ID",
+  "token": "YOUR_BOT_TOKEN",
+  "allowedGuildIds": ["GUILD_ID_1", "GUILD_ID_2"],
+  "ownerId": "YOUR_USER_ID",
+  "restrictedMessage": "This bot is not authorized for this server."
+}
+```
+
+```bash .env
+DISCORD_CLIENT_ID="YOUR_CLIENT_ID"
+DISCORD_TOKEN="YOUR_BOT_TOKEN"
+DISCORD_ALLOWED_GUILDS="GUILD_ID_1,GUILD_ID_2"
+BOT_OWNER_ID="YOUR_USER_ID"
+RESTRICTED_MESSAGE="This bot is not authorized for this server."
+LOG_LEVEL="INFO"
+LOG_TO_FILE="false"
+```
+</CodeGroup>
+
+<Note>
+  Environment variables take precedence over `config.json` values. This allows you to use the config file for defaults and override specific values with environment variables in production.
+</Note>
+
+## Configuration Loading
+
+The bot loads configuration in this order (utils/config.js:14-57):
+
+1. Load `.env` file if present
+2. Read `config.json` if it exists
+3. Override with environment variables
+4. Validate required fields (`clientId` and `token`)
+
+If required configuration is missing, the bot will exit with an error message.
+
+## Finding Your IDs
+
+<AccordionGroup>
+  <Accordion title="How to get your Client ID">
+    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Select your application
+    3. Navigate to **OAuth2** → **General**
+    4. Copy the **Client ID**
+  </Accordion>
+
+  <Accordion title="How to get your Bot Token">
+    1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+    2. Select your application
+    3. Navigate to **Bot**
+    4. Click **Reset Token** (or **Copy** if you haven't reset it yet)
+    5. Save this token securely
+  </Accordion>
+
+  <Accordion title="How to get Guild IDs">
+    1. Enable Developer Mode in Discord (User Settings → Advanced → Developer Mode)
+    2. Right-click on a server icon
+    3. Click **Copy Server ID**
+  </Accordion>
+
+  <Accordion title="How to get your User ID">
+    1. Enable Developer Mode in Discord (User Settings → Advanced → Developer Mode)
+    2. Right-click on your username
+    3. Click **Copy User ID**
+  </Accordion>
+</AccordionGroup>
+
+## Starting the Bot
+
+Once configured, start the bot:
+
+```bash
+node bot.js
+```
+
+You should see startup logs indicating successful configuration loading and connection to Discord.
+
+## Next Steps
+
+After initial setup, configure:
+
+- [Channel destinations](/configuration/channels) for raid signups
+- [Permissions](/configuration/permissions) for role-based access control
+- [Templates](/configuration/templates) to customize raid types
+- [Server settings](/configuration/settings) for reminders and automation

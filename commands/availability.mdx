@@ -1,0 +1,326 @@
+---
+title: /availability
+description: Record and view when members are available for raids
+---
+
+The `/availability` command allows members to record their timezone, preferred days/times, and roles, helping raid leaders schedule events when the most people can participate.
+
+## Command Signature
+
+```
+/availability <set|view|summary|optimal|check|clear|post-button|list> [...options]
+```
+
+## Subcommands
+
+<Tabs>
+  <Tab title="Set">
+    Set your availability (opens a form).
+    
+    ```
+    /availability set [user:@PlayerName]
+    ```
+    
+    <ParamField path="user" type="user">
+      User to set availability for (Admin only, defaults to you)
+    </ParamField>
+    
+    Opens a modal with fields:
+    
+    **Timezone**
+    - Format: EST, PST, UTC-5, GMT+1, America/New_York
+    - Example: `EST`, `America/Chicago`, `UTC-5`
+    
+    **Preferred Days/Times**
+    - Format: Natural language time windows
+    - Examples:
+      - `Mon-Fri 7-10pm`
+      - `Weekends 6-11pm`
+      - `Sat 2pm-6pm, Sun afternoons`
+      - `Weekdays evenings`
+      - `Everyday after 5pm`
+    
+    **Preferred Roles**
+    - Example: `Vanguard, Support, Surge, Gates, Flex`
+    
+    **Notes**
+    - Any other scheduling constraints or preferences
+    
+    **Result:**
+    - Bot parses your time windows and confirms
+    - Shows parsed windows in your timezone
+    - If parsing fails, notifies admins via audit log
+  </Tab>
+  <Tab title="View">
+    View availability for a user.
+    
+    ```
+    /availability view [user:@PlayerName]
+    ```
+    
+    <ParamField path="user" type="user">
+      User to view (defaults to you)
+    </ParamField>
+    
+    **Output includes:**
+    - Timezone
+    - Preferred days (raw input)
+    - Preferred roles
+    - Notes
+    - Parsed time windows (in your timezone)
+    
+    **Example:**
+    ```
+    PlayerName's Availability
+    
+    Timezone: America/New_York
+    Preferred Days: Mon-Fri 7-10pm, Weekends 6-11pm
+    Preferred Roles: Storm, Support
+    Notes: Can't do early mornings
+    
+    Parsed Time Windows (EST):
+    Monday 7:00 PM-10:00 PM
+    Tuesday 7:00 PM-10:00 PM
+    ...
+    Saturday 6:00 PM-11:00 PM
+    Sunday 6:00 PM-11:00 PM
+    ```
+  </Tab>
+  <Tab title="Summary">
+    View server-wide availability breakdown.
+    
+    ```
+    /availability summary
+    ```
+    
+    **Output includes:**
+    - Total members with availability set
+    - Heatmap of most popular time slots
+    - Top 5 optimal raid times
+    - Times shown in your timezone
+    
+    **Example:**
+    ```
+    Server Availability Summary
+    
+    24 members have recorded their availability.
+    Times shown in EST
+    
+    Hottest Time Slots:
+    Day       Time      Users
+    ─────────────────────────
+    Saturday  7:00 PM   ████████████ 18
+    Sunday    3:00 PM   ██████████ 15
+    Friday    8:00 PM   ████████ 12
+    ...
+    
+    Best Times for Raids:
+    1. Saturday 7:00 PM — 18 available
+    2. Sunday 3:00 PM — 15 available
+    3. Friday 8:00 PM — 12 available
+    ```
+  </Tab>
+  <Tab title="Optimal">
+    Find time slots when the most users are available.
+    
+    ```
+    /availability optimal [min_users:5]
+    ```
+    
+    <ParamField path="min_users" type="integer">
+      Minimum number of available users (1-100)
+    </ParamField>
+    
+    **Output includes:**
+    - All time slots meeting the minimum
+    - Grouped by day of week
+    - Sorted by availability count
+    - Times shown in your timezone
+    
+    **Example:**
+    ```
+    Optimal Times (5+ users)
+    Times shown in EST
+    
+    Saturday:
+    7:00 PM (18 users), 6:00 PM (16 users), 8:00 PM (14 users)
+    
+    Sunday:
+    3:00 PM (15 users), 2:00 PM (12 users), 4:00 PM (10 users)
+    
+    Friday:
+    8:00 PM (12 users), 7:00 PM (9 users)
+    
+    Based on 24 member availability records
+    ```
+  </Tab>
+  <Tab title="Check">
+    Check who is available at a specific time.
+    
+    ```
+    /availability check time:"Saturday 7pm"
+    ```
+    
+    <ParamField path="time" type="string" required>
+      Time to check. Formats:
+      - Natural language: "Saturday 7pm", "tomorrow 8pm"
+      - Unix timestamp: `1234567890`
+    </ParamField>
+    
+    **Output includes:**
+    - Formatted time
+    - List of available members (up to 25 shown)
+    - Total count
+    
+    **Example:**
+    ```
+    Availability Check
+    
+    Time: Saturday, Mar 2, 7:00 PM EST
+    
+    18 members available:
+    @Player1, @Player2, @Player3, @Player4, @Player5,
+    @Player6, @Player7, @Player8, @Player9, @Player10,
+    ...
+    
+    Based on recorded availability windows
+    ```
+  </Tab>
+  <Tab title="Clear">
+    Clear your availability data.
+    
+    ```
+    /availability clear [user:@PlayerName]
+    ```
+    
+    <ParamField path="user" type="user">
+      User to clear availability for (Admin only)
+    </ParamField>
+    
+    Permanently removes availability data for the user.
+  </Tab>
+  <Tab title="Post Button">
+    Post a persistent "Set Availability" button (Admin only).
+    
+    ```
+    /availability post-button
+    ```
+    
+    Creates a message in the current channel with:
+    - Informative embed about availability
+    - "Set Availability" button
+    - Clicking the button opens the availability form
+    - Useful for onboarding channels
+  </Tab>
+  <Tab title="List">
+    View all members who have set their availability.
+    
+    ```
+    /availability list
+    ```
+    
+    **Output includes:**
+    - Count of members with availability
+    - List showing:
+      - Display name
+      - Timezone
+      - Days preview (truncated)
+      - Parse status (✓ or ⚠️)
+    - Members with parse failures shown first
+    
+    **Example:**
+    ```
+    Availability List
+    
+    24 members have set their availability.
+    ⚠️ 2 with parse issues (check their input)
+    
+    Members:
+    ⚠️ Player1 (EST)
+       weekdays nights and stuff
+    ✓ Player2 (PST)
+       Mon-Fri 7-10pm
+    ✓ Player3 (EST)
+       Weekends 6-11pm
+    ...
+    
+    Parse Failures:
+    Members marked with ⚠️ have entered availability
+    that could not be parsed into time windows.
+    Use /availability set user:@user to fix their input.
+    ```
+  </Tab>
+</Tabs>
+
+## Time Parsing
+
+The bot attempts to parse natural language into structured time windows:
+
+**Supported formats:**
+- `Mon-Fri 7-10pm` → Monday-Friday, 7:00 PM - 10:00 PM
+- `Weekends 6-11pm` → Saturday-Sunday, 6:00 PM - 11:00 PM
+- `Weekdays evenings` → Monday-Friday, 6:00 PM - 10:00 PM (heuristic)
+- `Sat 2pm-6pm` → Saturday, 2:00 PM - 6:00 PM
+- `Everyday after 5pm` → All days, 5:00 PM - 11:59 PM
+
+**Parse failures:**
+- If the bot can't parse your input, it saves it but marks it as unparsed
+- Admins are notified via audit log
+- You can fix it by running `/availability set` again
+
+## Timezone Handling
+
+All time windows are stored in UTC and converted for display:
+- Input is converted from your timezone to UTC
+- Output is converted from UTC to viewer's timezone
+- This ensures accurate cross-timezone availability
+
+## Integration with Other Commands
+
+**[/raid](/commands/raid) - Find Sub:**
+- When finding substitutes, the bot checks availability
+- Users available at raid time get priority in the ranking
+
+**[/create](/commands/create) - Recurring Raids:**
+- Can use availability data to suggest optimal times
+
+**[/stats](/commands/stats) - User Stats:**
+- User stats show availability settings if configured
+
+## Examples
+
+<CodeGroup>
+```text Set Your Availability
+/availability set
+→ Timezone: EST
+→ Days: Mon-Fri 7-10pm, Weekends 6-11pm
+→ Roles: Storm, Support, Flex
+→ Notes: Can't do early mornings
+```
+
+```text View Server Availability
+/availability summary
+```
+
+```text Find Optimal Times (10+ Users)
+/availability optimal min_users:10
+```
+
+```text Check Who's Available Saturday Night
+/availability check time:"Saturday 8pm"
+```
+
+```text Set Availability for Another User (Admin)
+/availability set user:@PlayerName
+```
+
+```text Post Availability Button for Onboarding
+/availability post-button
+```
+</CodeGroup>
+
+## Related Commands
+
+- [/stats](/commands/stats) - View user availability in stats
+- [/raid](/commands/raid) - Find Sub uses availability
+- [/poll](/commands/poll) - Create time slot polls

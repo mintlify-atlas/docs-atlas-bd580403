@@ -1,0 +1,110 @@
+---
+title: Introduction
+description: A powerful Discord bot for managing raid signups in Wizard101 guilds
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.svg"
+  alt="WizBot Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.svg"
+  alt="WizBot Hero Dark"
+/>
+
+## Welcome to WizBot
+
+WizBot is a comprehensive Discord bot built specifically for Wizard101 communities to streamline raid organization, signup management, and team coordination. Whether you're running Dragonspyre raids, Lemuria boss battles, or Museum runs, WizBot handles the complexity so you can focus on the adventure.
+
+<CardGroup cols={2}>
+  <Card
+    title="Reaction-Based Signups"
+    icon="hand-pointer"
+    iconType="duotone"
+  >
+    Users sign up by reacting with role emojis. Automatic waitlist management keeps everything organized.
+  </Card>
+  <Card
+    title="Smart Scheduling"
+    icon="calendar-check"
+    iconType="duotone"
+  >
+    Natural language time parsing ("tomorrow 7pm", "next Friday 6:30") and recurring raid automation.
+  </Card>
+  <Card
+    title="Comprehensive Stats"
+    icon="chart-line"
+    iconType="duotone"
+  >
+    Track participation, attendance rates, weekly/monthly trends, and identify inactive members.
+  </Card>
+  <Card
+    title="Availability Tracking"
+    icon="clock"
+    iconType="duotone"
+  >
+    Server-wide availability heatmaps and optimal time finder for 50+ users.
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Raid Management
+
+- **Multiple Raid Types** — Support for Dragonspyre (Voracious Void), Lemuria (Ghastly Conspiracy), Polaris (Cabal's Revenge), Museum runs, Gold Key bosses, and Challenge Mode
+- **Flexible Team Organization** — Role-based signups with customizable team compositions
+- **Waitlist Automation** — Automatic promotion with DM notifications when slots open up
+- **Side Assignment** — Special handling for Lemuria boss mechanics
+
+### Automation
+
+- **Recurring Raids** — Schedule raids to auto-create on weekly, daily, or custom intervals
+- **Smart Reminders** — Configurable notifications for raid creators and participants
+- **Auto-Close** — Automatically close signups when raids fill up
+- **Time Slot Polling** — Reaction-based polls to find optimal raid times
+
+### Analytics & Tracking
+
+- **Unified Statistics** — User stats, server stats, weekly/monthly trends
+- **Participation Tracking** — Monitor attendance rates and raid frequency
+- **Inactive Member Detection** — Identify members who haven't participated recently
+- **CSV Export** — Download complete participation data
+- **Availability Heatmaps** — Visualize when your community is most active
+
+### Server Management
+
+- **Per-Guild Customization** — Each Discord server maintains independent settings
+- **Role-Based Permissions** — Configure admin roles and command-specific access
+- **Custom Templates** — Enable/disable or rename raid templates per guild
+- **Audit Logging** — Track all raid management actions
+- **Discussion Threads** — Automatic thread creation for each raid signup
+
+### Performance & Reliability
+
+- **Rate Limiting** — Prevents spam with configurable cooldowns
+- **Circuit Breaker Pattern** — API resilience and graceful degradation
+- **Performance Monitoring** — DM alerts for high latency, memory issues, and failures
+- **Graceful Shutdown** — Safe state preservation on restart
+- **SQLite Database** — Fast, reliable data persistence
+
+## Technology Stack
+
+WizBot is built with modern Node.js technologies:
+
+- **[discord.js](https://discord.js.org/)** — Discord API library for bot interactions
+- **[chrono-node](https://github.com/wanasit/chrono)** — Natural language date/time parsing
+- **[better-sqlite3](https://github.com/WiseLibs/better-sqlite3)** — Fast, synchronous SQLite database
+
+## Community-Driven Design
+
+WizBot was designed with input from active Wizard101 Discord communities. Every feature addresses real coordination challenges faced by raid organizers, from handling complex role requirements to managing large waitlists and tracking long-term participation trends.
+
+<Card
+  title="Ready to get started?"
+  icon="rocket"
+  href="/quickstart"
+>
+  Follow our quickstart guide to set up WizBot in your Discord server
+</Card>

@@ -1,0 +1,704 @@
+---
+title: Testing Guide
+description: Learn how to write and run tests for RaidBot using Node.js built-in test runner
+---
+
+## Overview
+
+RaidBot uses Node.js's built-in test runner (introduced in Node.js 18) for unit and integration testing. The test suite covers critical functionality including state persistence, waitlist logic, rate limiting, and input validation.
+
+## Running Tests
+
+### Run All Tests
+
+```bash
+npm test
+```
+
+This runs all test files in the `tests/` directory with the `--test-force-exit` flag to ensure clean shutdown.
+
+### Run Specific Test File
+
+```bash
+node --test tests/statePersistence.test.js
+```
+
+### Run with Coverage (Node 20+)
+
+```bash
+node --test --experimental-test-coverage
+```
+
+### Watch Mode
+
+```bash
+node --test --watch
+```
+
+<Info>
+The test suite uses in-memory SQLite databases to avoid locking issues and ensure test isolation.
+</Info>
+
+## Test Structure
+
+RaidBot tests follow a simple, consistent structure using Node.js test runner APIs.
+
+### Basic Test Template
+
+```javascript tests/example.test.js
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+// Import module under test
+const { functionToTest } = require('../moduleToTest');
+
+test.beforeEach(() => {
+    // Setup before each test
+});
+
+test('should do something', () => {
+    // Arrange
+    const input = 'test';
+    
+    // Act
+    const result = functionToTest(input);
+    
+    // Assert
+    assert.equal(result, 'expected');
+});
+
+test('should handle edge cases', () => {
+    assert.throws(() => {
+        functionToTest(null);
+    }, Error);
+});
+```
+
+### Async Tests
+
+```javascript
+test('should handle async operations', async () => {
+    const result = await asyncFunction();
+    assert.equal(result, expected);
+});
+```
+
+## Test Suite Overview
+
+RaidBot has 15 test files covering different areas of functionality.
+
+### State Persistence Tests
+
+**File:** `tests/statePersistence.test.js`
+
+Tests the core state management layer to ensure raids persist correctly.
+
+```javascript tests/statePersistence.test.js
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const {
+    activeRaids,
+    loadActiveRaidState,
+    setActiveRaid,
+    deleteActiveRaid
+} = require('../state');
+
+test.beforeEach(() => {
+    activeRaids.clear();
+});
+
+test('setActiveRaid stores raid in memory and database', () => {
+    const raidData = {
+        raidId: 'A1',
+        guildId: '1',
+        channelId: 'channel1',
+        creatorId: 'creator1',
+        type: 'raid',
+        signups: []
+    };
+    setActiveRaid('message-1', raidData);
+
+    // Verify it's in memory
+    assert.ok(activeRaids.has('message-1'));
+    const stored = activeRaids.get('message-1');
+    assert.equal(stored.raidId, 'A1');
+});
+
+test('loadActiveRaidState restores previous entries', () => {
+    // Store a raid
+    setActiveRaid('message-restore', storedRaid);
+    
+    // Clear memory
+    activeRaids.clear();
+
+    // Reload from database
+    loadActiveRaidState();
+    
+    // Verify restoration
+    const entry = activeRaids.get('message-restore');
+    assert.ok(entry);
+    assert.equal(entry.raidId, 'RESTORE');
+});
+```
+
+**Tests:**
+- Raid storage in memory and database
+- State restoration on restart
+- Deletion from both memory and database
+
+See implementation at `tests/statePersistence.test.js:1-76`
+
+### Waitlist Tests
+
+**File:** `tests/waitlistNotifications.test.js`
+
+Tests automatic waitlist promotion when slots open.
+
+```javascript tests/waitlistNotifications.test.js
+const { processWaitlistOpenings } = require('../utils/waitlistNotifications');
+const { setActiveRaid, activeRaids } = require('../state');
+
+// Mock Discord client
+const client = {
+    users: {
+        async fetch() {
+            return {
+                async send() { return true; }
+            };
+        }
+    }
+};
+
+test('processWaitlistOpenings promotes raid waitlist users', async () => {
+    const raidData = {
+        template: { name: 'Test Raid' },
+        type: 'raid',
+        signups: [
+            {
+                emoji: '1️⃣',
+                name: 'Slot 1',
+                slots: 1,
+                users: [],           // Empty slot
+                waitlist: ['user-b']  // User waiting
+            }
+        ],
+        closed: false
+    };
+
+    setActiveRaid('test-message', raidData, { persist: false });
+
+    const promoted = await processWaitlistOpenings(client, raidData, 'test-message');
+    
+    assert.equal(promoted, true);
+    assert.deepEqual(raidData.signups[0].users, ['user-b']);
+    assert.deepEqual(raidData.signups[0].waitlist, []);
+});
+```
+
+**Tests:**
+- Raid waitlist promotion
+- Museum waitlist promotion
+- DM notifications on promotion
+
+See implementation at `tests/waitlistNotifications.test.js:1-76`
+
+### Rate Limiter Tests
+
+**File:** `tests/rateLimiter.test.js`
+
+Tests sliding window rate limiting algorithm.
+
+```javascript tests/rateLimiter.test.js
+const { RateLimiter } = require('../utils/rateLimiter');
+
+test('should allow requests within limit', () => {
+    const limiter = new RateLimiter({
+        maxRequests: 3,
+        windowMs: 1000
+    });
+
+    assert.ok(limiter.isAllowed('user1'));
+    assert.ok(limiter.isAllowed('user1'));
+    assert.ok(limiter.isAllowed('user1'));
+    
+    // 4th request should be blocked
+    assert.equal(limiter.isAllowed('user1'), false);
+});
+
+test('should reset after window expires', async () => {
+    const limiter = new RateLimiter({
+        maxRequests: 2,
+        windowMs: 100  // 100ms window
+    });
+
+    assert.ok(limiter.isAllowed('user1'));
+    assert.ok(limiter.isAllowed('user1'));
+    assert.equal(limiter.isAllowed('user1'), false);
+    
+    // Wait for window to expire
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    assert.ok(limiter.isAllowed('user1'));
+});
+```
+
+**Tests:**
+- Request counting within window
+- Window expiration and reset
+- Multiple user isolation
+- Memory cleanup
+
+### Validator Tests
+
+**File:** `tests/validators.test.js`
+
+Tests input validation for timezones, times, and roles.
+
+```javascript tests/validators.test.js
+const { validateTimezone, validateDays, validateRoles } = require('../utils/validators');
+
+test('validateTimezone accepts valid formats', () => {
+    assert.ok(validateTimezone('EST').valid);
+    assert.ok(validateTimezone('America/New_York').valid);
+    assert.ok(validateTimezone('UTC-5').valid);
+    assert.ok(validateTimezone('GMT+1').valid);
+});
+
+test('validateTimezone rejects invalid formats', () => {
+    const result = validateTimezone('Invalid/Timezone');
+    assert.equal(result.valid, false);
+    assert.ok(result.error.includes('Invalid timezone'));
+});
+
+test('validateDays parses time ranges', () => {
+    const result = validateDays('Mon-Fri 7-10pm');
+    assert.ok(result.valid);
+    assert.ok(result.value.includes('Mon-Fri'));
+});
+
+test('validateRoles accepts valid raid roles', () => {
+    const result = validateRoles('Vanguard, Support, Surge');
+    assert.ok(result.valid);
+    assert.ok(result.value.includes('Vanguard'));
+});
+```
+
+**Tests:**
+- Timezone format validation
+- Time range parsing
+- Role name validation
+- Input sanitization
+
+### Time Parsing Tests
+
+**File:** `tests/chrono.test.js`
+
+Tests natural language date/time parsing using chrono-node.
+
+```javascript tests/chrono.test.js
+const chrono = require('chrono-node');
+
+test('parses relative dates', () => {
+    const result = chrono.parseDate('tomorrow at 7pm');
+    assert.ok(result instanceof Date);
+    assert.equal(result.getHours(), 19);
+});
+
+test('parses named days', () => {
+    const result = chrono.parseDate('next Friday at 6:30pm');
+    assert.ok(result instanceof Date);
+    assert.equal(result.getDay(), 5); // Friday
+});
+
+test('parses absolute dates', () => {
+    const result = chrono.parseDate('March 15 at 8pm');
+    assert.ok(result instanceof Date);
+    assert.equal(result.getMonth(), 2); // March (0-indexed)
+});
+```
+
+**Tests:**
+- Relative dates ("tomorrow", "in 2 days")
+- Named days ("next Friday", "Monday")
+- Absolute dates ("March 15")
+- Time specifications ("7pm", "6:30pm")
+
+### Full Test Coverage
+
+| Test File | Lines | Focus Area |
+|-----------|-------|------------|
+| `statePersistence.test.js` | 76 | State management |
+| `waitlistNotifications.test.js` | 76 | Waitlist promotion |
+| `reactionHandlers.test.js` | 200+ | Reaction processing |
+| `rateLimiter.test.js` | 150+ | Rate limiting |
+| `validators.test.js` | 200+ | Input validation |
+| `chrono.test.js` | 100+ | Time parsing |
+| `permissions.test.js` | 150+ | Access control |
+| `poll.test.js` | 100+ | Polling system |
+| `availability.test.js` | 150+ | Availability tracking |
+| `auditLog.test.js` | 100+ | Audit logging |
+| `errorMessages.test.js` | 80+ | Error formatting |
+| `timezone.test.js` | 100+ | Timezone conversion |
+| `raidHelpers.test.js` | 200+ | Raid utilities |
+| `challengeMode.test.js` | 150+ | Challenge mode |
+| `challengeModeBlockers.test.js` | 100+ | Challenge blockers |
+
+## Writing New Tests
+
+### Test Organization
+
+Follow these guidelines when writing new tests:
+
+<Steps>
+  <Step title="Create test file">
+    Name it `*.test.js` in the `tests/` directory:
+    ```bash
+    tests/myFeature.test.js
+    ```
+  </Step>
+  
+  <Step title="Import dependencies">
+    ```javascript
+    const test = require('node:test');
+    const assert = require('node:assert/strict');
+    const { myFunction } = require('../myModule');
+    ```
+  </Step>
+  
+  <Step title="Add setup/teardown">
+    ```javascript
+    test.beforeEach(() => {
+        // Reset state before each test
+    });
+    
+    test.afterEach(() => {
+        // Cleanup after each test
+    });
+    ```
+  </Step>
+  
+  <Step title="Write descriptive tests">
+    ```javascript
+    test('should handle valid input correctly', () => {
+        // Test implementation
+    });
+    
+    test('should throw error on invalid input', () => {
+        // Test implementation
+    });
+    ```
+  </Step>
+</Steps>
+
+### Assertion Methods
+
+Node.js `assert/strict` provides these common assertions:
+
+```javascript
+// Equality
+assert.equal(actual, expected);
+assert.notEqual(actual, unexpected);
+assert.deepEqual(actualObject, expectedObject);
+
+// Truthiness
+assert.ok(value); // truthy
+assert.equal(value, false); // falsy
+
+// Exceptions
+assert.throws(() => {
+    dangerousFunction();
+}, ErrorType);
+
+assert.doesNotThrow(() => {
+    safeFunction();
+});
+
+// Type checking
+assert.strictEqual(actual, expected); // === comparison
+assert.match(string, /regex/);
+```
+
+### Mocking Discord.js Objects
+
+When testing code that interacts with Discord:
+
+```javascript
+// Mock interaction
+const mockInteraction = {
+    guildId: 'test-guild',
+    user: { id: 'test-user' },
+    reply: async (options) => { /* noop */ },
+    deferReply: async () => { /* noop */ }
+};
+
+// Mock client
+const mockClient = {
+    users: {
+        fetch: async (userId) => ({
+            id: userId,
+            send: async (content) => { /* noop */ }
+        })
+    },
+    channels: {
+        fetch: async (channelId) => ({
+            id: channelId,
+            send: async (content) => { /* noop */ }
+        })
+    }
+};
+
+// Mock message
+const mockMessage = {
+    id: 'message-id',
+    edit: async (options) => mockMessage,
+    react: async (emoji) => { /* noop */ },
+    reactions: {
+        cache: new Map()
+    }
+};
+```
+
+### Testing Database Operations
+
+<Info>
+Tests automatically use in-memory SQLite databases, so no cleanup is needed.
+</Info>
+
+```javascript
+const { setActiveRaid, getActiveRaid, deleteActiveRaid } = require('../state');
+
+test('database operations', () => {
+    const raidData = {
+        raidId: 'TEST1',
+        guildId: 'guild-1',
+        channelId: 'channel-1',
+        type: 'raid',
+        signups: []
+    };
+    
+    // Insert
+    setActiveRaid('message-1', raidData);
+    
+    // Read
+    const retrieved = getActiveRaid('message-1');
+    assert.equal(retrieved.raidId, 'TEST1');
+    
+    // Delete
+    deleteActiveRaid('message-1');
+    assert.equal(getActiveRaid('message-1'), null);
+});
+```
+
+## Test-Driven Development
+
+Follow TDD principles when adding new features:
+
+<Steps>
+  <Step title="Write failing test">
+    ```javascript
+    test('should calculate raid statistics', () => {
+        const stats = calculateRaidStats('guild-1');
+        assert.equal(stats.totalRaids, 5);
+    });
+    ```
+  </Step>
+  
+  <Step title="Run test (it fails)">
+    ```bash
+    npm test
+    # ✗ should calculate raid statistics
+    ```
+  </Step>
+  
+  <Step title="Implement minimum code">
+    ```javascript
+    function calculateRaidStats(guildId) {
+        return { totalRaids: 5 };
+    }
+    ```
+  </Step>
+  
+  <Step title="Run test (it passes)">
+    ```bash
+    npm test
+    # ✓ should calculate raid statistics
+    ```
+  </Step>
+  
+  <Step title="Refactor and repeat">
+    Add more test cases and improve implementation.
+  </Step>
+</Steps>
+
+## Continuous Integration
+
+### GitHub Actions Example
+
+```yaml .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Run linter
+        run: npm run lint
+```
+
+## Debugging Tests
+
+### Run with Inspector
+
+```bash
+node --test --inspect-brk tests/myTest.test.js
+```
+
+Then open `chrome://inspect` in Chrome.
+
+### Add Debug Logging
+
+```javascript
+const debug = process.env.DEBUG === 'true';
+
+test('my test', () => {
+    const result = myFunction();
+    
+    if (debug) {
+        console.log('Result:', result);
+    }
+    
+    assert.ok(result);
+});
+```
+
+Run with:
+```bash
+DEBUG=true node --test tests/myTest.test.js
+```
+
+## Test Coverage Goals
+
+Aim for these coverage targets:
+
+- **Critical paths:** 100% (state management, signup logic)
+- **Commands:** 80% (user interactions)
+- **Utilities:** 90% (shared functions)
+- **Overall:** 85%
+
+<Warning>
+Always test edge cases:
+- Empty inputs
+- Null/undefined values
+- Concurrent operations
+- Network failures
+- Invalid Discord objects
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep tests independent">
+    Each test should be able to run in isolation without depending on other tests.
+    
+    ```javascript
+    // Bad - depends on previous test
+    test('test 1', () => {
+        globalState.value = 5;
+    });
+    
+    test('test 2', () => {
+        assert.equal(globalState.value, 5); // Depends on test 1
+    });
+    
+    // Good - independent
+    test('test 1', () => {
+        const state = { value: 5 };
+        assert.equal(state.value, 5);
+    });
+    
+    test('test 2', () => {
+        const state = { value: 5 };
+        assert.equal(state.value, 5);
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Use descriptive test names">
+    Test names should clearly describe what is being tested.
+    
+    ```javascript
+    // Bad
+    test('test 1', () => { /* ... */ });
+    
+    // Good
+    test('should promote waitlisted users when slots open', () => { /* ... */ });
+    ```
+  </Accordion>
+  
+  <Accordion title="Test one thing at a time">
+    Each test should focus on a single behavior.
+    
+    ```javascript
+    // Bad - tests multiple things
+    test('raid creation', () => {
+        const raid = createRaid();
+        assert.ok(raid.id);
+        assert.ok(raid.signups.length === 0);
+        assert.equal(raid.closed, false);
+    });
+    
+    // Good - separate tests
+    test('should generate raid ID on creation', () => {
+        const raid = createRaid();
+        assert.ok(raid.id);
+    });
+    
+    test('should initialize with empty signups', () => {
+        const raid = createRaid();
+        assert.equal(raid.signups.length, 0);
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Clean up after tests">
+    Always clean up resources to prevent test interference.
+    
+    ```javascript
+    test.afterEach(() => {
+        activeRaids.clear();
+        // Reset any global state
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="diagram-project" href="/development/architecture">
+    Understand the system design
+  </Card>
+  <Card title="Project Structure" icon="folder-tree" href="/development/project-structure">
+    Navigate the codebase
+  </Card>
+  <Card title="Contributing" icon="code-pull-request" href="/development/contributing">
+    Submit your first PR
+  </Card>
+</CardGroup>
