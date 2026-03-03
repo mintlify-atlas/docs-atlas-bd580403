@@ -1,0 +1,134 @@
+{
+  "projectType": "saas",
+  "projectName": "RaidBot",
+  "projectDescription": "A Discord bot for managing Wizard101 raid signups with reaction-based signups, role management, and analytics.",
+  "theme": "maple",
+  "primaryColor": "#7B68EE",
+  "lightColor": "#9B88FF",
+  "darkColor": "#5A4ABE",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/raid-management",
+              "features/recurring-raids",
+              "features/museum-signups",
+              "features/availability-tracking",
+              "features/stats-analytics"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/setup",
+              "configuration/channels",
+              "configuration/permissions",
+              "configuration/templates",
+              "configuration/settings"
+            ]
+          },
+          {
+            "group": "User Guides",
+            "pages": [
+              "guides/creating-raids",
+              "guides/managing-raids",
+              "guides/signup-process",
+              "guides/time-parsing",
+              "guides/polls"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/database",
+              "advanced/monitoring",
+              "advanced/migration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Commands",
+        "groups": [
+          {
+            "group": "Command Reference",
+            "pages": [
+              "commands/overview",
+              "commands/create",
+              "commands/raid",
+              "commands/recurring",
+              "commands/raidsignup",
+              "commands/raidinfo",
+              "commands/stats",
+              "commands/availability",
+              "commands/poll",
+              "commands/setchannel",
+              "commands/settings",
+              "commands/templates",
+              "commands/permissions",
+              "commands/utility"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Developer Guide",
+            "pages": [
+              "development/architecture",
+              "development/project-structure",
+              "development/testing",
+              "development/contributing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Reaction-based raid signups with automatic waitlist management",
+    "Recurring raid schedules with custom intervals and spawn times",
+    "Natural language time parsing (tomorrow 7pm, next Friday 6:30)",
+    "Unified stats and analytics with participation tracking",
+    "Availability tracking with server-wide heatmaps",
+    "Time slot polling to find optimal raid times",
+    "Customizable raid templates per guild",
+    "Role-based permissions and command access control",
+    "Smart reminders and auto-close for full raids",
+    "SQLite database with migration tools",
+    "Performance monitoring with DM-based alerts",
+    "Museum signup system with auto-lock"
+  ],
+  "publicApiSurface": [
+    "/create - Interactive raid/museum creation flow",
+    "/raid - Management panel (Close, Reopen, Delete, Change Time)",
+    "/recurring - Manage recurring raid schedules",
+    "/raidsignup - Admin signup edits",
+    "/raidinfo - List, view details, or export raids",
+    "/stats - User, server, weekly, monthly stats and export",
+    "/availability - Record/view availability and find optimal times",
+    "/poll - Create time slot polls",
+    "/setchannel - Configure raid/museum/audit channels",
+    "/settings - Reminder and auto-close configuration",
+    "/templates - Enable/disable or rename raid templates",
+    "/permissions - Configure role-based permissions",
+    "/changelog - View current release notes",
+    "/help - Command documentation",
+    "/ping - Bot health check",
+    "/testalert - Send test alert to bot owner"
+  ]
+}
