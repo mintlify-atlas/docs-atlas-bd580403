@@ -84,6 +84,7 @@
               "commands/raidsignup",
               "commands/raidinfo",
               "commands/stats",
+              "commands/leaderboard",
               "commands/availability",
               "commands/poll",
               "commands/setchannel",

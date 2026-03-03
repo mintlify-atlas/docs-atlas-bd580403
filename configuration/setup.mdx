@@ -46,6 +46,10 @@ The bot uses environment variables for core configuration. Create a `.env` file 
   Enable file-based logging in addition to console output.
 </ParamField>
 
+<ParamField path="LOG_COLORIZE" type="boolean" default="true">
+  Enable colored console output for logs. Set to `false` to disable colors (useful for log aggregation systems).
+</ParamField>
+
 ## Configuration File
 
 Alternatively, create a `config.json` file in the root directory:

@@ -1,0 +1,239 @@
+---
+title: /leaderboard
+description: View raid leaderboards and track achievements
+---
+
+The `/leaderboard` command displays participation rankings and unlockable achievements, adding a gamification layer to raid participation tracking.
+
+## Subcommands
+
+### /leaderboard top
+
+View the top raiders by total raid count.
+
+```
+/leaderboard top
+```
+
+**Response:**
+
+Displays a ranked leaderboard of the top 10 participants in the server:
+
+- 🥇 First place - Gold medal
+- 🥈 Second place - Silver medal  
+- 🥉 Third place - Bronze medal
+- 4-10th place - Numbered rankings
+
+Each entry shows:
+- User mention
+- Total raid count
+
+<Note>
+Only includes participants with at least 1 completed raid. The leaderboard uses guild-specific statistics.
+</Note>
+
+### /leaderboard role
+
+View top raiders for a specific role.
+
+```
+/leaderboard role role_name:<role>
+```
+
+<ParamField path="role_name" type="string" required>
+  The role name to check rankings for (e.g., "Hunter", "Hammer", "Jade")
+</ParamField>
+
+**Example:**
+
+```
+/leaderboard role role_name:Hunter
+```
+
+**Response:**
+
+Shows the top 10 players who have played the specified role most often. Useful for identifying specialists and experienced players in specific roles.
+
+<Tip>
+Role names are case-sensitive and must match exactly as they appear in raid templates.
+</Tip>
+
+### /leaderboard achievements
+
+View unlocked achievements and progress.
+
+```
+/leaderboard achievements [user:<@user>]
+```
+
+<ParamField path="user" type="user">
+  User to view achievements for. Defaults to yourself if not specified.
+</ParamField>
+
+**Response:**
+
+Displays an achievement card showing:
+- Unlocked achievements (✅) with emoji, name, and description
+- Locked achievements (🔒) shown as strikethrough with requirements
+- Progress indicator (X/11 achievements unlocked)
+- Color-coded embed:
+  - 🥇 Gold (5+ achievements)
+  - 🥈 Silver (2-4 achievements)
+  - 🥉 Bronze (1 achievement)
+
+## Achievement List
+
+RaidBot includes 11 unlockable achievements based on participation:
+
+### Participation Milestones
+
+<AccordionGroup>
+  <Accordion title="🎮 Rookie Raider">
+    Complete your first raid
+    
+    **Requirement:** 1+ raids
+  </Accordion>
+  
+  <Accordion title="⭐ Regular">
+    Complete 10 raids
+    
+    **Requirement:** 10+ raids
+  </Accordion>
+  
+  <Accordion title="🏅 Veteran">
+    Complete 25 raids
+    
+    **Requirement:** 25+ raids
+  </Accordion>
+  
+  <Accordion title="🏆 Elite Raider">
+    Complete 50 raids
+    
+    **Requirement:** 50+ raids
+  </Accordion>
+  
+  <Accordion title="👑 Raid Master">
+    Complete 100 raids
+    
+    **Requirement:** 100+ raids
+  </Accordion>
+</AccordionGroup>
+
+### Role Diversity
+
+<AccordionGroup>
+  <Accordion title="🔄 Flexible">
+    Play 5 different roles
+    
+    **Requirement:** Participate in raids using at least 5 distinct roles
+  </Accordion>
+  
+  <Accordion title="🎭 Jack of All Trades">
+    Play 10 different roles
+    
+    **Requirement:** Participate in raids using at least 10 distinct roles
+  </Accordion>
+</AccordionGroup>
+
+### Specialization
+
+<AccordionGroup>
+  <Accordion title="🎯 Specialist">
+    Play the same role 20 times
+    
+    **Requirement:** Participate in 20+ raids using a single role
+  </Accordion>
+  
+  <Accordion title="💎 Master Specialist">
+    Play the same role 50 times
+    
+    **Requirement:** Participate in 50+ raids using a single role
+  </Accordion>
+</AccordionGroup>
+
+### Activity Patterns
+
+<AccordionGroup>
+  <Accordion title="📅 Weekend Warrior">
+    Complete 10 weekend raids
+    
+    **Requirement:** Participate in 10+ raids on Saturdays or Sundays
+  </Accordion>
+</AccordionGroup>
+
+### Reliability
+
+<AccordionGroup>
+  <Accordion title="✅ Reliable">
+    Complete 20 raids with no no-shows
+    
+    **Requirement:** Participate in 20+ raids with zero no-shows recorded
+  </Accordion>
+</AccordionGroup>
+
+## How Achievements Are Tracked
+
+Achievements are calculated based on your guild-specific raid statistics:
+
+- **Total raids** - Completed raid signups where you attended
+- **Role counts** - How many times you've played each role
+- **Weekday counts** - Distribution of raids by day of week (0 = Sunday, 6 = Saturday)
+- **No-shows** - Times you were marked as not attending after signing up
+
+<Warning>
+No-shows negatively impact the "Reliable" achievement. Maintain good attendance to unlock it!
+</Warning>
+
+## Use Cases
+
+### Recognize Top Contributors
+
+```
+/leaderboard top
+```
+
+Display server-wide participation rankings to celebrate active members.
+
+### Find Role Specialists
+
+```
+/leaderboard role role_name:Hammer
+```
+
+Identify experienced players in specific roles when forming teams.
+
+### Track Personal Progress
+
+```
+/leaderboard achievements
+```
+
+View your own achievement progress and see which milestones are next.
+
+### Compare Achievements
+
+```
+/leaderboard achievements user:@friend
+```
+
+View another user's achievements to see their participation style.
+
+## Tips
+
+<Tip>
+**Diversify your roles** to unlock both "Flexible" and "Jack of All Trades" achievements while also working toward "Specialist" milestones.
+</Tip>
+
+<Tip>
+**Weekend warriors** can focus on Saturday/Sunday raids to unlock the Weekend Warrior achievement while building overall participation.
+</Tip>
+
+<Tip>
+**Maintain attendance** by marking yourself as available when you sign up. Avoid no-shows to keep your "Reliable" achievement on track.
+</Tip>
+
+## Related Commands
+
+- [/stats](/commands/stats) - View detailed participation statistics
+- [/raidinfo](/commands/raidinfo) - List upcoming raids to participate in
+- [/availability](/commands/availability) - Set when you're available for raids
